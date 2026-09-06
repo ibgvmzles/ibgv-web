@@ -1,21 +1,18 @@
 import Header from '@/components/layout/Header';
 import Link from 'next/link';
 import { getHorarios } from '@/lib/sheets';
-import { getLatestSermons } from '@/lib/youtube'; // Importamos la nueva función
+import { getLatestSermonFromPlaylist } from '@/lib/youtube'; // <-- Nueva importación
 
 export default async function Home() {
   // 1. Obtenemos los datos desde las APIs de manera simultánea
-  const [horarios, sermones] = await Promise.all([
+  const [horarios, ultimoSermon] = await Promise.all([
     getHorarios(),
-    getLatestSermons()
+    getLatestSermonFromPlaylist() // <-- Llamamos a la nueva función
   ]);
 
   // 2. Filtramos horarios
   const domingos = horarios.filter(h => h.tipo.toLowerCase() === 'domingo');
   const semana = horarios.filter(h => h.tipo.toLowerCase() !== 'domingo');
-
-  // 3. Obtenemos el video más reciente (el primero de la lista)
-  const ultimoSermon = sermones.length > 0 ? sermones[0] : null;
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
