@@ -39,7 +39,7 @@ export default async function Home() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
           <h1 className="text-4xl md:text-6xl font-manofa mb-6 text-white leading-tight">
             Una comunidad reformada <br className="hidden md:block" />
-            en <span className="text-brand-primary">Manizales</span>
+            en <span className="text-[#DEA6AB]">Manizales</span>
           </h1>
 
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
