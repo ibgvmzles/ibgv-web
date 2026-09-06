@@ -1,4 +1,5 @@
 import Header from '@/components/layout/Header';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getHorarios } from '@/lib/sheets';
 import { getLatestSermonFromPlaylist } from '@/lib/youtube'; // <-- Nueva importación
@@ -19,39 +20,55 @@ export default async function Home() {
       <Header />
 
       {/* =========================================
-          1. SECCIÓN HERO (Bienvenida)
+          1. SECCIÓN PRINCIPAL (Hero con Banner)
           ========================================= */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-ui-bg flex items-center justify-center border-b border-gray-100">
-        <div className="max-w-4xl mx-auto text-center space-y-8 mt-12 sm:mt-8">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl text-ui-dark leading-tight">
-            Proclamando las verdades del{' '}
-            <span className="text-brand-primary">evangelio de Dios</span>
+      <section className="relative pt-40 pb-32 flex items-center justify-center min-h-[85vh] overflow-hidden">
+        {/* Imagen de fondo y filtro oscuro */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/banner-home.jpeg"
+            alt="Congregación Iglesia Bíblica Gracia Verdadera"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          <div className="absolute inset-0 bg-black/70"></div>
+        </div>
+
+        {/* Contenido (Textos, botón y dirección) */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
+          <h1 className="text-4xl md:text-6xl font-manofa mb-6 text-white leading-tight">
+            Una comunidad reformada <br className="hidden md:block" />
+            en <span className="text-brand-primary">Manizales</span>
           </h1>
-          <p className="max-w-2xl mx-auto text-lg sm:text-xl text-ui-muted leading-relaxed">
-            Somos una comunidad reformada en Manizales donde el centro es Jesucristo.
-            Un puerto seguro lejos del moralismo, que abraza la profundidad bíblica y
-            descansa en la gracia verdadera.
+
+          <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Donde el centro de absolutamente todo es Jesucristo y su obra en la cruz.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="#horarios"
+              href="#visitanos"
               className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white font-medium text-lg rounded-sm hover:bg-brand-secondary transition-all shadow-lg hover:shadow-xl"
             >
-              Acompáñanos este domingo
+              Visítanos
             </a>
-            <Link
-              href="/nosotros"
-              className="w-full sm:w-auto px-8 py-4 bg-white text-ui-dark border border-gray-200 font-medium text-lg rounded-sm hover:border-brand-primary hover:text-brand-primary transition-all"
-            >
-              Conoce nuestra doctrina
-            </Link>
           </div>
-          <div className="pt-12 text-sm text-ui-muted flex items-center justify-center gap-2">
+
+          {/* Dirección Clicable a Google Maps (Ajustada para fondo oscuro) */}
+          <div className="pt-12 text-sm text-gray-400 flex items-center justify-center gap-2">
             <svg className="w-5 h-5 text-brand-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>Calle 44 No. 23-52 Piso 3, Edificio Cootilca (El Centro)</span>
+            <a
+              href="https://maps.google.com/?q=Edificio+Cootilca,+Calle+44+%2323-52,+Manizales"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white hover:underline transition-colors"
+            >
+              Calle 44 No. 23-52 Piso 3, Edificio Cootilca
+            </a>
           </div>
         </div>
       </section>
@@ -86,7 +103,7 @@ export default async function Home() {
               )}
 
               <p className="mt-8 text-sm text-ui-muted pt-4 border-t border-gray-200">
-                Nos reunimos en el Edificio Cootilca (El Centro) para adorar juntos mediante el canto, la oración y la predicación expositiva.
+                Nos reunimos en el Edificio Cootilca (Calle 44 No. 23-52 Piso 3) para adorar juntos mediante el canto, la oración y la predicación expositiva.
               </p>
             </div>
 

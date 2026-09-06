@@ -6,8 +6,8 @@ export default function EvangelioPage() {
       id: 1,
       title: 'DIOS ES SANTO Y CREADOR',
       verses: [
-        { ref: 'Isaías 6:3', text: 'Y el uno al otro daba voces, diciendo: «Santo, Santo, Santo es el Señor de los ejércitos, Llena está toda la tierra de Su gloria».' },
-        { ref: 'Apocalipsis 4:11', text: '«Digno eres, Señor y Dios nuestro, de recibir la gloria y el honor y el poder, porque Tú creaste todas las cosas, y por Tu voluntad existen y fueron creadas».' }
+        { ref: 'Isaías 6:3', text: 'Y el uno al otro daba voces, diciendo: «Santo, Santo, Santo es el Señor de los ejércitos, Llena está toda la tierra de Su gloria.' },
+        { ref: 'Apocalipsis 4:11', text: 'Digno eres, Señor y Dios nuestro, de recibir la gloria y el honor y el poder, porque Tú creaste todas las cosas, y por Tu voluntad existen y fueron creadas.' }
       ],
       explanation: 'Dios es perfecto, santo y digno de toda adoración. Él nos creó para tener relación con Él.',
       bgColor: 'bg-white'
@@ -17,7 +17,7 @@ export default function EvangelioPage() {
       title: 'EL HOMBRE ES PECADOR',
       verses: [
         { ref: 'Romanos 3:23', text: 'por cuanto todos pecaron y no alcanzan la gloria de Dios.' },
-        { ref: 'Romanos 3:10', text: 'Como está escrito: «No hay justo, ni aun uno».' }
+        { ref: 'Romanos 3:10', text: 'Como está escrito: No hay justo, ni aun uno.' }
       ],
       explanation: 'El problema no es solo el mundo, es el corazón humano. Todos hemos pecado. Nos hemos apartado de Dios.',
       bgColor: 'bg-ui-bg'

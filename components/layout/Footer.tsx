@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Footer() {
@@ -10,14 +11,15 @@ export default function Footer() {
 
           {/* Columna 1: Marca y Misión */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-brand-primary text-white flex items-center justify-center font-manofa text-xl rounded-sm">
-                IBGV
-              </div>
-              <span className="font-manofa text-white text-xl leading-tight">
-                IGLESIA BÍBLICA<br/>GRACIA VERDADERA
-              </span>
-            </div>
+            <Link href="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
+              <Image
+                src="/logo-footer.png"
+                alt="Logo IBGV"
+                width={200}
+                height={80}
+                className="h-16 w-auto"
+              />
+            </Link>
             <p className="text-sm text-gray-400 leading-relaxed">
               Una comunidad reformada en Manizales donde el centro de absolutamente todo es Jesucristo y su obra en la cruz.
             </p>

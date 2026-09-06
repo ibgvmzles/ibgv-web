@@ -11,7 +11,7 @@ export default function Header() {
     { name: 'Inicio', href: '/' },
     { name: 'Nosotros', href: '/nosotros' },
     { name: 'Sermones', href: '/sermones' },
-    { name: 'Actividades', href: '/actividades' },
+    { name: 'El Evangelio', href: '/evangelio' },
   ];
 
   return (
