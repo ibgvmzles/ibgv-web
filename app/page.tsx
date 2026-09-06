@@ -1,14 +1,21 @@
 import Header from '@/components/layout/Header';
 import Link from 'next/link';
 import { getHorarios } from '@/lib/sheets';
+import { getLatestSermons } from '@/lib/youtube'; // Importamos la nueva función
 
 export default async function Home() {
-  // 1. Obtenemos los datos dinámicos desde Google Sheets
-  const horarios = await getHorarios();
+  // 1. Obtenemos los datos desde las APIs de manera simultánea
+  const [horarios, sermones] = await Promise.all([
+    getHorarios(),
+    getLatestSermons()
+  ]);
 
-  // 2. Filtramos los datos según la columna "tipo" de tu Excel
+  // 2. Filtramos horarios
   const domingos = horarios.filter(h => h.tipo.toLowerCase() === 'domingo');
   const semana = horarios.filter(h => h.tipo.toLowerCase() !== 'domingo');
+
+  // 3. Obtenemos el video más reciente (el primero de la lista)
+  const ultimoSermon = sermones.length > 0 ? sermones[0] : null;
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
@@ -63,11 +70,9 @@ export default async function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-12 items-start">
-
-            {/* Tarjeta Día del Señor (Domingo) */}
             <div className="bg-ui-bg p-8 md:p-10 rounded-sm border border-gray-100 shadow-sm">
               <h3 className="text-2xl text-brand-primary mb-6 border-b border-gray-200 pb-4">
-                El Día del Señor - Domingo 6 de septiembre
+                El Día del Señor
               </h3>
 
               {domingos.length > 0 ? (
@@ -88,10 +93,8 @@ export default async function Home() {
               </p>
             </div>
 
-            {/* Tarjeta Actividades de Semana */}
             <div>
               <h3 className="text-2xl text-ui-dark mb-6">Durante la semana</h3>
-
               <div className="space-y-3">
                 {semana.length > 0 ? (
                   semana.map((item, idx) => (
@@ -112,16 +115,15 @@ export default async function Home() {
                 )}
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
       {/* =========================================
-          3. SECCIÓN ÚLTIMO SERMÓN (Multimedia)
+          3. SECCIÓN ÚLTIMO SERMÓN (Multimedia Dinámica)
           ========================================= */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-brand-primary text-white">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
 
           <div className="space-y-6">
             <span className="text-brand-light font-medium tracking-wider uppercase text-sm">
@@ -130,29 +132,71 @@ export default async function Home() {
             <h2 className="text-3xl md:text-5xl font-manofa leading-tight">
               Alimentándonos de la Palabra
             </h2>
-            <p className="text-brand-light text-lg max-w-md">
+            <p className="text-brand-light text-lg max-w-md pb-2">
               Acompáñanos en nuestro estudio expositivo. Puedes ver las grabaciones en video o escuchar el audio mientras te desplazas por la ciudad.
             </p>
-            <div className="flex flex-wrap gap-4 pt-4">
-              <a href="https://youtube.com/@ibgvmanizales" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-white text-brand-primary px-6 py-3 rounded-sm font-medium hover:bg-gray-100 transition-colors">
+
+            {/* Reproductor Incrustado de Spotify (Súper Liviano) */}
+            <div className="max-w-md bg-brand-secondary/30 p-4 rounded-sm border border-brand-secondary">
+              <h3 className="text-xs font-bold text-brand-light mb-3 uppercase tracking-wider">Escucha el Podcast:</h3>
+              <iframe
+                src="https://open.spotify.com/embed/show/033I8k275SDuLONqsAOVdA?utm_source=generator&theme=0"
+                width="100%"
+                height="152"
+                frameBorder="0"
+                allowFullScreen={false}
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                className="rounded-sm shadow-lg"
+              ></iframe>
+            </div>
+
+            <div className="pt-2">
+              <Link href="/sermones" className="inline-flex items-center gap-2 bg-white text-brand-primary px-6 py-3 rounded-sm font-medium hover:bg-gray-100 transition-colors">
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.582,6.186c-0.23-0.86-0.908-1.538-1.768-1.768C18.254,4,12,4,12,4S5.746,4,4.186,4.418c-0.86,0.23-1.538,0.908-1.768,1.768C2,7.746,2,12,2,12s0,4.254,0.418,5.814c0.23,0.86,0.908,1.538,1.768,1.768C5.746,20,12,20,12,20s6.254,0,7.814-0.418c0.86-0.23,1.538-0.908,1.768-1.768C22,16.254,22,12,22,12S22,7.746,21.582,6.186z M9.996,15.005l0-6.01L15.224,12L9.996,15.005z"/></svg>
-                Canal de YouTube
-              </a>
-              <a href="https://open.spotify.com/show/033I8k275SDuLONqsAOVdA" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 border border-brand-light text-white px-6 py-3 rounded-sm font-medium hover:bg-brand-secondary transition-colors">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 5.523 4.477 10 10 10s10-4.477 10-10C22 6.477 17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.467-.077-.334.132-.67.467-.745 3.808-.87 7.076-.496 9.715 1.115.293.18.386.563.207.853zm1.19-3.21c-.225.367-.704.482-1.07.257-2.695-1.656-6.804-2.146-9.97-1.176-.412.126-.84-.105-.967-.517-.126-.412.106-.84.518-.968 3.633-1.112 8.18-.567 11.233 1.308.368.225.483.704.256 1.096zm.014-3.34c-3.224-1.916-8.544-2.093-11.606-1.16-.505.154-1.037-.132-1.19-.637-.154-.504.13-1.036.635-1.19 3.51-.107 9.38.093 13.126 2.316.452.268.602.846.335 1.298-.268.453-.846.603-1.3.336z"/></svg>
-                Podcast en Spotify
-              </a>
+                Ver todos los sermones
+              </Link>
             </div>
           </div>
 
-          <div className="relative aspect-video bg-ui-dark rounded-sm overflow-hidden shadow-2xl flex items-center justify-center group cursor-pointer border border-brand-secondary">
-            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-            <div className="z-10 bg-brand-primary w-16 h-16 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-              <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </div>
-            <div className="absolute bottom-4 left-4 z-10">
-              <p className="text-white font-medium shadow-sm">Sermón Dominical</p>
-            </div>
+          {/* Tarjeta Visual de Video desde YouTube */}
+          <div>
+             <h3 className="text-xs font-bold text-brand-light mb-3 uppercase tracking-wider">Último video en YouTube:</h3>
+             {ultimoSermon ? (
+                <a
+                  href={`https://www.youtube.com/watch?v=${ultimoSermon.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative aspect-video bg-ui-dark rounded-sm overflow-hidden shadow-2xl flex items-center justify-center group cursor-pointer border border-brand-secondary block"
+                >
+                  {/* Miniatura extraída de YouTube */}
+                  <img
+                    src={ultimoSermon.thumbnail}
+                    alt={ultimoSermon.title}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                  />
+
+                  <div className="absolute inset-0 bg-black/30 group-hover:bg-transparent transition-colors duration-300"></div>
+
+                  <div className="z-10 bg-brand-primary w-16 h-16 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+
+                  {/* Título superpuesto con gradiente */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/90 to-transparent z-10 text-left">
+                    <p className="text-white font-medium text-lg leading-tight line-clamp-2 shadow-sm">
+                      {ultimoSermon.title}
+                    </p>
+                    <p className="text-gray-300 text-sm mt-1">{ultimoSermon.date}</p>
+                  </div>
+                </a>
+             ) : (
+                <div className="relative aspect-video bg-brand-secondary/50 rounded-sm overflow-hidden shadow-2xl flex flex-col items-center justify-center border border-brand-secondary text-brand-light">
+                  <svg className="w-10 h-10 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                  <p>Cargando último sermón...</p>
+                </div>
+             )}
           </div>
 
         </div>
