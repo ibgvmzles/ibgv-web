@@ -50,3 +50,80 @@ export async function getLatestSermonFromPlaylist(): Promise<YouTubeVideo | null
     return null;
   }
 }
+
+// Añade esto al final de ibgv-web/lib/youtube.ts
+
+export interface YouTubePlaylist {
+  id: string;
+  title: string;
+  thumbnail: string;
+  itemCount: number;
+}
+
+export async function getAllPlaylists(): Promise<YouTubePlaylist[]> {
+  const API_KEY = process.env.GOOGLE_API_KEY?.trim();
+  const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID?.trim();
+
+  if (!API_KEY || !CHANNEL_ID) return [];
+
+  // Usamos el endpoint "playlists" de YouTube
+  const url = `https://www.googleapis.com/youtube/v3/playlists?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet,contentDetails&maxResults=50`;
+
+  try {
+    const res = await fetch(url, { next: { revalidate: 43200 } });
+
+    if (!res.ok) {
+      throw new Error('Error fetching Playlists');
+    }
+
+    const data = await res.json();
+
+    if (!data.items || data.items.length === 0) {
+      return [];
+    }
+
+    return data.items.map((item: any) => ({
+      id: item.id,
+      title: item.snippet.title,
+      // Miniatura de la lista
+      thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+      // Cantidad de videos que tiene la lista
+      itemCount: item.contentDetails.itemCount,
+    }));
+  } catch (error) {
+    console.error('Error en getAllPlaylists:', error);
+    return [];
+  }
+}
+
+// Añade esto al final de ibgv-web/lib/youtube.ts
+
+export async function getVideosFromPlaylist(playlistId: string): Promise<YouTubeVideo[]> {
+  const API_KEY = process.env.GOOGLE_API_KEY?.trim();
+  if (!API_KEY || !playlistId) return [];
+
+  const url = `https://www.googleapis.com/youtube/v3/playlistItems?key=${API_KEY}&playlistId=${playlistId}&part=snippet&maxResults=50`;
+
+  try {
+    const res = await fetch(url, { next: { revalidate: 43200 } });
+    if (!res.ok) throw new Error('Error fetching Playlist Videos');
+
+    const data = await res.json();
+    if (!data.items) return [];
+
+    return data.items
+      // Filtramos videos "Privados" o "Eliminados" que a veces quedan ocultos en YouTube
+      .filter((item: any) => item.snippet.title !== 'Private video' && item.snippet.title !== 'Deleted video')
+      .map((item: any) => ({
+        id: item.snippet.resourceId.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+        date: new Date(item.snippet.publishedAt).toLocaleDateString('es-CO', {
+          year: 'numeric', month: 'short', day: 'numeric'
+        }),
+      }));
+  } catch (error) {
+    console.error('Error en getVideosFromPlaylist:', error);
+    return [];
+  }
+}
