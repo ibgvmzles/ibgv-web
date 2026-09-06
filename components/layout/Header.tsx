@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Header() {
@@ -20,14 +21,15 @@ export default function Header() {
 
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link href="/" className="flex items-center gap-2">
-              {/* Aquí luego reemplazaremos esto por la etiqueta <img src="/logo.svg" /> */}
-              <div className="w-10 h-10 bg-brand-primary text-white flex items-center justify-center font-manofa text-xl rounded-sm">
-                IBGV
-              </div>
-              <span className="font-manofa text-brand-primary text-xl hidden sm:block leading-tight">
-                IGLESIA BÍBLICA<br/>GRACIA VERDADERA
-              </span>
+            <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+              <Image
+                src="/logo-ibgv.png"
+                alt="Logo Iglesia Bíblica Gracia Verdadera"
+                width={200}
+                height={80}
+                className="h-14 w-auto md:h-16"
+                priority
+              />
             </Link>
           </div>
 
