@@ -67,7 +67,7 @@ export default async function Home() {
             {/* Tarjeta Día del Señor (Domingo) */}
             <div className="bg-ui-bg p-8 md:p-10 rounded-sm border border-gray-100 shadow-sm">
               <h3 className="text-2xl text-brand-primary mb-6 border-b border-gray-200 pb-4">
-                El Día del Señor
+                El Día del Señor - Domingo 6 de septiembre
               </h3>
 
               {domingos.length > 0 ? (
