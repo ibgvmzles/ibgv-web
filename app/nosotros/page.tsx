@@ -21,7 +21,7 @@ export default function NosotrosPage() {
       <section className="py-20 md:py-28 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-2xl md:text-4xl text-ui-dark font-medium leading-relaxed font-manofa">
-            «Somos la Iglesia Bíblica Gracia Verdadera, una comunidad reformada, basada en la teología del Nuevo Pacto. Estamos ubicados en la ciudad de Manizales, donde el centro de absolutamente todo es Jesucristo y su obra en la cruz.»
+            «Somos la Iglesia Bíblica Gracia Verdadera, una comunidad reformada, basada en la teología del Nuevo Pacto,donde el centro de absolutamente todo es Jesucristo y su obra en la cruz. Estamos ubicados en la ciudad de Manizales.»
           </p>
         </div>
       </section>
