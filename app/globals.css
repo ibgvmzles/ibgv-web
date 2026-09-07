@@ -12,19 +12,21 @@
   --color-ui-muted: #666666;
   --color-ui-bg: #FAFAFA;
 
-  /* Enlazamos las variables tipográficas de layout.tsx */
-  --font-manofa: var(--font-oswald), sans-serif; /* <-- Cambiamos esto temporalmente */
+  /* Tipografías oficiales del manual de marca */
+  --font-manofa: var(--font-manofa), sans-serif;
   --font-oswald: var(--font-oswald), sans-serif;
-  --font-sans: var(--font-inter), sans-serif;
+  --font-barcelony: var(--font-barcelony), cursive;
 }
 
 /* Configuraciones globales básicas */
 @layer base {
   body {
-    @apply bg-white text-ui-dark font-sans antialiased;
+    /* Aplicamos Oswald Light como texto base de toda la web */
+    @apply bg-white text-ui-dark font-oswald font-light antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    /* Los títulos conservan Manofa por defecto */
     @apply font-manofa font-normal tracking-wide;
   }
 }
