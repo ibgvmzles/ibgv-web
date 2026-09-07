@@ -49,7 +49,7 @@ export default function Header() {
           {/* Botón CTA Desktop (AQUÍ CAMBIÓ LA RUTA) */}
           <div className="hidden md:flex">
             <Link
-              href="/#visitanos"
+              href="/visitanos"
               className="px-5 py-2 rounded-sm bg-brand-primary text-white font-medium hover:bg-brand-secondary transition-colors duration-200"
             >
               Visítanos
@@ -90,7 +90,7 @@ export default function Header() {
             ))}
             {/* Botón CTA Móvil (AQUÍ TAMBIÉN CAMBIÓ LA RUTA) */}
             <Link
-              href="/#visitanos"
+              href="/visitanos"
               onClick={() => setIsMenuOpen(false)}
               className="block px-3 py-2 mt-4 text-base font-medium text-white bg-brand-primary rounded-md text-center"
             >

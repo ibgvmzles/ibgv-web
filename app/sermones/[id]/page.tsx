@@ -8,15 +8,16 @@ export default async function SeriePage({
   searchParams
 }: {
   params: Promise<{ id: string }>,
-  searchParams: Promise<{ v?: string, view?: string }>
+  searchParams: Promise<{ v?: string, view?: string, sort?: string }>
 }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
 
   const playlistId = resolvedParams.id;
   const videoId = resolvedSearchParams.v;
-  // Leemos si el usuario quiere ver en lista o en cuadrícula (por defecto 'grid')
   const viewType = resolvedSearchParams.view || 'grid';
+  // 1. Leemos el orden (desc = más recientes primero, por defecto)
+  const sortType = resolvedSearchParams.sort || 'desc';
 
   const videos = await getVideosFromPlaylist(playlistId);
 
@@ -32,15 +33,22 @@ export default async function SeriePage({
     )
   }
 
+  // 2. Ordenamos los videos matemáticamente
+  const sortedVideos = [...videos].sort((a, b) => {
+    const dateA = new Date(a.rawDate || 0).getTime();
+    const dateB = new Date(b.rawDate || 0).getTime();
+    return sortType === 'desc' ? dateB - dateA : dateA - dateB;
+  });
+
+  // 3. Seleccionamos el video activo de la lista YA ordenada
   const activeVideo = videoId
-    ? videos.find(vid => vid.id === videoId) || videos[0]
-    : videos[0];
+    ? sortedVideos.find(vid => vid.id === videoId) || sortedVideos[0]
+    : sortedVideos[0];
 
   return (
     <main className="min-h-screen bg-ui-bg flex flex-col">
       <Header />
 
-      {/* 1. ZONA DEL REPRODUCTOR PRINCIPAL */}
       <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 bg-ui-dark text-white">
         <div className="max-w-5xl mx-auto">
           <Link href="/sermones" className="inline-flex items-center gap-2 text-brand-light hover:text-white mb-6 transition-colors font-medium">
@@ -68,50 +76,67 @@ export default async function SeriePage({
         </div>
       </section>
 
-      {/* 2. ZONA DE LISTA DE REPRODUCCIÓN (EPISODIOS) */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white flex-grow">
         <div className="max-w-5xl mx-auto">
 
-          {/* Cabecera con Botones de Vistas */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 border-b border-gray-100 pb-4 gap-4">
             <h2 className="text-2xl font-manofa text-ui-dark">
               Videos en esta serie <span className="text-brand-primary">({videos.length})</span>
             </h2>
 
-            {/* Botones Grid / List */}
-            <div className="flex bg-ui-bg p-1 rounded-sm border border-gray-200">
-              <Link
-                href={`?v=${activeVideo.id}&view=grid`}
-                scroll={false}
-                className={`p-2 rounded-sm transition-colors ${viewType === 'grid' ? 'bg-white shadow-sm text-brand-primary' : 'text-ui-muted hover:text-ui-dark'}`}
-                title="Vista de cuadrícula"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-              </Link>
-              <Link
-                href={`?v=${activeVideo.id}&view=list`}
-                scroll={false}
-                className={`p-2 rounded-sm transition-colors ${viewType === 'list' ? 'bg-white shadow-sm text-brand-primary' : 'text-ui-muted hover:text-ui-dark'}`}
-                title="Vista de lista"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-              </Link>
+            {/* 4. BOTONES DE FILTRO Y VISTA JUNTOS */}
+            <div className="flex flex-wrap items-center gap-3">
+
+              {/* Filtro Orden */}
+              <div className="flex bg-ui-bg p-1 rounded-sm border border-gray-200 text-sm">
+                <Link
+                  href={`?v=${activeVideo.id}&view=${viewType}&sort=desc`}
+                  scroll={false}
+                  className={`px-3 py-1.5 rounded-sm transition-colors ${sortType === 'desc' ? 'bg-white shadow-sm text-brand-primary font-medium' : 'text-ui-muted hover:text-ui-dark'}`}
+                >
+                  Más recientes
+                </Link>
+                <Link
+                  href={`?v=${activeVideo.id}&view=${viewType}&sort=asc`}
+                  scroll={false}
+                  className={`px-3 py-1.5 rounded-sm transition-colors ${sortType === 'asc' ? 'bg-white shadow-sm text-brand-primary font-medium' : 'text-ui-muted hover:text-ui-dark'}`}
+                >
+                  Más antiguos
+                </Link>
+              </div>
+
+              <div className="h-6 w-px bg-gray-200 hidden sm:block"></div>
+
+              {/* Filtro Vista */}
+              <div className="flex bg-ui-bg p-1 rounded-sm border border-gray-200">
+                <Link
+                  href={`?v=${activeVideo.id}&view=grid&sort=${sortType}`}
+                  scroll={false}
+                  className={`p-2 rounded-sm transition-colors ${viewType === 'grid' ? 'bg-white shadow-sm text-brand-primary' : 'text-ui-muted hover:text-ui-dark'}`}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                </Link>
+                <Link
+                  href={`?v=${activeVideo.id}&view=list&sort=${sortType}`}
+                  scroll={false}
+                  className={`p-2 rounded-sm transition-colors ${viewType === 'list' ? 'bg-white shadow-sm text-brand-primary' : 'text-ui-muted hover:text-ui-dark'}`}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* Contenedor dinámico (Grid o List) */}
-          <div className={
-            viewType === 'grid'
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-              : "flex flex-col gap-4"
-          }>
-            {videos.map((video) => {
+          {/* Mapeamos sortedVideos en lugar de videos */}
+          <div className={viewType === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col gap-4"}>
+            {sortedVideos.map((video) => {
               const isPlaying = video.id === activeVideo.id;
 
               return (
                 <Link
                   key={video.id}
-                  href={`?v=${video.id}&view=${viewType}`}
+                  // Mantenemos ambos parámetros en el enlace
+                  href={`?v=${video.id}&view=${viewType}&sort=${sortType}`}
                   scroll={true}
                   className={`group flex rounded-sm overflow-hidden border transition-all duration-300 ${
                     viewType === 'grid' ? 'flex-col' : 'flex-row items-center h-28'
@@ -121,7 +146,6 @@ export default async function SeriePage({
                       : 'border-gray-200 bg-ui-bg hover:shadow-lg hover:border-brand-primary/50'
                   }`}
                 >
-                  {/* Miniatura del video */}
                   <div className={`relative ${viewType === 'grid' ? 'aspect-video w-full' : 'w-40 md:w-48 h-full flex-shrink-0'}`}>
                     <img
                       src={video.thumbnail}
@@ -138,8 +162,6 @@ export default async function SeriePage({
                       </div>
                     )}
                   </div>
-
-                  {/* Textos */}
                   <div className={`flex flex-col justify-between flex-grow ${viewType === 'grid' ? 'p-4' : 'p-4 md:px-6'}`}>
                     <h3 className={`font-bold line-clamp-2 ${viewType === 'grid' ? 'text-sm' : 'text-base md:text-lg'} ${isPlaying ? 'text-brand-primary' : 'text-ui-dark group-hover:text-brand-primary transition-colors'}`}>
                       {video.title}

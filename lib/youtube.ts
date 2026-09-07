@@ -5,6 +5,7 @@ export interface YouTubeVideo {
   title: string;
   thumbnail: string;
   date: string;
+  rawDate?: string; // <-- Agregamos esto aquí
 }
 
 export async function getLatestSermonFromPlaylist(): Promise<YouTubeVideo | null> {
@@ -58,6 +59,7 @@ export interface YouTubePlaylist {
   title: string;
   thumbnail: string;
   itemCount: number;
+  publishedAt?: string;
 }
 
 export async function getAllPlaylists(): Promise<YouTubePlaylist[]> {
@@ -89,6 +91,7 @@ export async function getAllPlaylists(): Promise<YouTubePlaylist[]> {
       thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
       // Cantidad de videos que tiene la lista
       itemCount: item.contentDetails.itemCount,
+      publishedAt: item.snippet.publishedAt,
     }));
   } catch (error) {
     console.error('Error en getAllPlaylists:', error);
@@ -121,6 +124,7 @@ export async function getVideosFromPlaylist(playlistId: string): Promise<YouTube
         date: new Date(item.snippet.publishedAt).toLocaleDateString('es-CO', {
           year: 'numeric', month: 'short', day: 'numeric'
         }),
+        rawDate: item.snippet.publishedAt,
       }));
   } catch (error) {
     console.error('Error en getVideosFromPlaylist:', error);

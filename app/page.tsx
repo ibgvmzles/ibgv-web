@@ -48,7 +48,7 @@ export default async function Home() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="#visitanos"
+              href="/visitanos"
               className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white font-medium text-lg rounded-sm hover:bg-brand-secondary transition-all shadow-lg hover:shadow-xl"
             >
               Visítanos

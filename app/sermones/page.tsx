@@ -7,19 +7,34 @@ export const metadata = {
   description: 'Biblioteca de predicaciones expositivas y estudios bíblicos de la IBGV en Manizales.',
 };
 
-export default async function SermonesPage() {
+export default async function SermonesPage({
+  searchParams
+}: {
+  searchParams: Promise<{ sort?: string }>
+}) {
+  const resolvedSearchParams = await searchParams;
+  // Leemos el orden (desc = más recientes primero, por defecto)
+  const sortType = resolvedSearchParams.sort || 'desc';
+
   // Traemos todas las listas del canal
   const playlists = await getAllPlaylists();
+
+  // Ordenamos las listas (series) matemáticamente por fecha de creación
+  const sortedPlaylists = [...playlists].sort((a: any, b: any) => {
+    const dateA = new Date(a.publishedAt || 0).getTime();
+    const dateB = new Date(b.publishedAt || 0).getTime();
+    return sortType === 'desc' ? dateB - dateA : dateA - dateB;
+  });
 
   return (
     <main className="min-h-screen bg-white flex flex-col">
       <Header />
 
       {/* Título de la sección */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-ui-bg border-b border-gray-100">
+      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 bg-ui-bg border-b border-gray-100">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-manofa text-ui-dark mb-6">
-            Biblioteca de <span className="text-brand-primary">Enseñanzas</span>
+            Biblioteca de <span className="text-[#DEA6AB]">Enseñanzas</span>
           </h1>
           <p className="text-lg text-ui-muted max-w-2xl mx-auto">
             Explora nuestras series de predicación expositiva y estudios bíblicos organizados por temas y libros de la Biblia.
@@ -27,16 +42,37 @@ export default async function SermonesPage() {
         </div>
       </section>
 
-      {/* Cuadrícula de Series */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white flex-grow">
+      <section className="py-8 px-4 sm:px-6 lg:px-8 bg-white flex-grow">
         <div className="max-w-7xl mx-auto">
-          {playlists.length > 0 ? (
+
+          {/* Controles de Filtro */}
+          <div className="flex justify-end mb-8">
+            <div className="flex bg-ui-bg p-1 rounded-sm border border-gray-200 text-sm">
+              <Link
+                href="?sort=desc"
+                scroll={false}
+                className={`px-3 py-1.5 rounded-sm transition-colors ${sortType === 'desc' ? 'bg-white shadow-sm text-brand-primary font-medium' : 'text-ui-muted hover:text-ui-dark'}`}
+              >
+                Más recientes
+              </Link>
+              <Link
+                href="?sort=asc"
+                scroll={false}
+                className={`px-3 py-1.5 rounded-sm transition-colors ${sortType === 'asc' ? 'bg-white shadow-sm text-brand-primary font-medium' : 'text-ui-muted hover:text-ui-dark'}`}
+              >
+                Más antiguas
+              </Link>
+            </div>
+          </div>
+
+          {/* Cuadrícula de Series */}
+          {sortedPlaylists.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {playlists.map((playlist) => (
+              {sortedPlaylists.map((playlist) => (
                 <Link
                   key={playlist.id}
-                  // Esto apuntará a la sub-página que crearemos en el próximo paso
-                  href={`/sermones/${playlist.id}`}
+                  // Al dar clic, obligamos a que los videos de adentro también se muestren desde el más reciente
+                  href={`/sermones/${playlist.id}?sort=desc`}
                   className="group flex flex-col bg-ui-bg rounded-sm border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
                 >
                   {/* Contenedor de la Imagen */}
