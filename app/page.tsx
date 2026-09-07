@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getHorarios } from '@/lib/sheets';
 import { getLatestSermonFromPlaylist } from '@/lib/youtube'; // <-- Nueva importación
+import DailyReading from '@/components/layout/DailyReading';
 
 export default async function Home() {
   // 1. Obtenemos los datos desde las APIs de manera simultánea
@@ -71,6 +72,11 @@ export default async function Home() {
             </a>
           </div>
         </div>
+      </section>
+
+      {/* WIDGET LECTURA DIARIA */}
+      <section className="relative z-20 -mt-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
+        <DailyReading />
       </section>
 
       {/* =========================================
