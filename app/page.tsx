@@ -1,15 +1,14 @@
 import Header from '@/components/layout/Header';
-import Image from 'next/image';
 import Link from 'next/link';
 import { getHorarios } from '@/lib/sheets';
-import { getLatestSermonFromPlaylist } from '@/lib/youtube'; // <-- Nueva importación
+import { getLatestSermonFromPlaylist } from '@/lib/youtube';
 import DailyReading from '@/components/layout/DailyReading';
 
 export default async function Home() {
   // 1. Obtenemos los datos desde las APIs de manera simultánea
   const [horarios, ultimoSermon] = await Promise.all([
     getHorarios(),
-    getLatestSermonFromPlaylist() // <-- Llamamos a la nueva función
+    getLatestSermonFromPlaylist()
   ]);
 
   // 2. Filtramos horarios
@@ -21,20 +20,24 @@ export default async function Home() {
       <Header />
 
       {/* =========================================
-          1. SECCIÓN PRINCIPAL (Hero con Banner)
+          1. SECCIÓN PRINCIPAL (Hero con Video de Fondo)
           ========================================= */}
       <section className="relative pt-40 pb-32 flex items-center justify-center min-h-[85vh] overflow-hidden">
-        {/* Imagen de fondo y filtro oscuro */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/banner-home.jpeg"
-            alt="Congregación Iglesia Bíblica Gracia Verdadera"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          <div className="absolute inset-0 bg-black/70"></div>
-        </div>
+
+        {/* Fondo de Video */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        >
+          <source src="/fondo-iglesia.mp4" type="video/mp4" />
+          Tu navegador no soporta videos HTML5.
+        </video>
+
+        {/* Filtro oscuro para garantizar la lectura de las letras blancas */}
+        <div className="absolute inset-0 bg-black/70 z-0"></div>
 
         {/* Contenido (Textos, botón y dirección) */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
@@ -56,7 +59,7 @@ export default async function Home() {
             </a>
           </div>
 
-          {/* Dirección Clicable a Google Maps (Ajustada para fondo oscuro) */}
+          {/* Dirección Clicable a Google Maps */}
           <div className="pt-12 text-sm text-gray-400 flex items-center justify-center gap-2">
             <svg className="w-5 h-5 text-brand-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
