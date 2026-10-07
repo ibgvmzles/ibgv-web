@@ -1,11 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const pathname = usePathname();
+
+  // 1. Verificamos si estamos exactamente en la página de inicio
+  const isHome = pathname === '/';
+
+  // 2. Escuchamos el scroll de la pantalla
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    handleScroll(); // Revisamos la posición inicial al cargar
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // 3. Definimos cuándo el header debe ser transparente:
+  // Solo en el inicio, solo si estamos arriba del todo, y con el menú móvil cerrado.
+  const isTransparent = isHome && !isScrolled && !isMenuOpen;
 
   const navigation = [
     { name: 'Inicio', href: '/' },
@@ -15,7 +40,13 @@ export default function Header() {
   ];
 
   return (
-    <header className="fixed w-full bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
+    <header
+      className={`fixed w-full z-50 transition-all duration-500 ${
+        isTransparent
+          ? 'bg-transparent border-transparent py-2'
+          : 'bg-white/90 backdrop-blur-md border-b border-gray-100 py-0'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
 
@@ -27,7 +58,11 @@ export default function Header() {
                 alt="Logo Iglesia Bíblica Gracia Verdadera"
                 width={200}
                 height={80}
-                className="h-14 w-auto md:h-16"
+                className={`h-14 w-auto md:h-16 transition-all duration-300 ${
+                  isTransparent
+                    ? 'drop-shadow-[0_2px_8px_rgba(255,255,255,0.7)] brightness-110'
+                    : ''
+                }`}
                 priority
               />
             </Link>
@@ -39,30 +74,42 @@ export default function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-ui-muted hover:text-brand-primary font-medium transition-colors duration-200"
+                className={`font-medium transition-colors duration-200 ${
+                  isTransparent
+                    ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] hover:text-[#DEA6AB]'
+                    : 'text-ui-muted hover:text-brand-primary'
+                }`}
               >
                 {item.name}
               </Link>
             ))}
           </nav>
 
-          {/* Botón CTA Desktop (AQUÍ CAMBIÓ LA RUTA) */}
+          {/* Botón CTA Desktop */}
           <div className="hidden md:flex">
             <Link
               href="/visitanos"
-              className="px-5 py-2 rounded-sm bg-brand-primary text-white font-medium hover:bg-brand-secondary transition-colors duration-200"
+              className={`px-5 py-2 rounded-sm font-medium transition-colors duration-200 shadow-md ${
+                isTransparent
+                  ? 'bg-brand-primary text-white border border-white/20 hover:bg-brand-secondary'
+                  : 'bg-brand-primary text-white hover:bg-brand-secondary'
+              }`}
             >
               Visítanos
             </Link>
           </div>
 
           {/* Botón Menú Móvil */}
-          <div className="md:hidden flex items-center">
+          <div className="md:flex flex items-center md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-ui-dark hover:text-brand-primary focus:outline-none"
+              className={`focus:outline-none transition-colors duration-200 ${
+                isTransparent
+                  ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] hover:text-gray-300'
+                  : 'text-ui-dark hover:text-brand-primary'
+              }`}
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isMenuOpen ? (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 ) : (
@@ -76,23 +123,23 @@ export default function Header() {
 
       {/* Menú Móvil Desplegable */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100">
+        <div className="md:hidden bg-white border-t border-gray-100 shadow-xl">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 text-base font-medium text-ui-muted hover:text-brand-primary hover:bg-gray-50 rounded-md"
+                className="block px-3 py-2 text-base font-medium text-ui-muted hover:text-brand-primary hover:bg-gray-50 rounded-md transition-colors"
               >
                 {item.name}
               </Link>
             ))}
-            {/* Botón CTA Móvil (AQUÍ TAMBIÉN CAMBIÓ LA RUTA) */}
+            {/* Botón CTA Móvil */}
             <Link
               href="/visitanos"
               onClick={() => setIsMenuOpen(false)}
-              className="block px-3 py-2 mt-4 text-base font-medium text-white bg-brand-primary rounded-md text-center"
+              className="block px-3 py-2 mt-4 text-base font-medium text-white bg-brand-primary rounded-md text-center hover:bg-brand-secondary transition-colors"
             >
               Visítanos
             </Link>
