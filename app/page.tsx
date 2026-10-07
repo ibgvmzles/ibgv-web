@@ -103,40 +103,43 @@ export default async function Home() {
               {domingos.length > 0 ? (
                 <ul className="space-y-6 text-ui-dark">
                   {domingos.map((item, idx) => (
-                    <li key={idx} className="flex justify-between items-center border-b border-gray-200/50 pb-2 last:border-0 last:pb-0">
-                      <span className="font-medium text-lg">{item.actividad}</span>
-                      <span className="text-brand-secondary font-medium">{item.hora}</span>
+                    <li key={idx} className="flex justify-between items-center border-b border-gray-200/50 pb-2 last:border-0 last:pb-0 gap-4">
+                      <span className="font-medium text-lg sm:text-xl">{item.actividad}</span>
+                      <span className="text-brand-secondary font-medium text-base sm:text-lg shrink-0">{item.hora}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-ui-muted italic">Horarios de domingo por confirmar...</p>
+                <p className="text-ui-muted italic text-base">Horarios de domingo por confirmar...</p>
               )}
 
-              <p className="mt-8 text-sm text-ui-muted pt-4 border-t border-gray-200">
+              {/* 1. Párrafo de dirección aumentado de text-sm a text-base / text-lg con mejor interlineado */}
+              <p className="mt-8 text-base sm:text-lg text-gray-600 leading-relaxed pt-4 border-t border-gray-200">
                 Nos reunimos en el Edificio Cootilca (Calle 44 No. 23-52 Piso 3) para adorar juntos mediante el canto, la oración y la predicación expositiva.
               </p>
             </div>
 
             <div>
               <h3 className="text-2xl text-ui-dark mb-6">Durante la semana</h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {semana.length > 0 ? (
                   semana.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-4 p-4 bg-gray-50 hover:bg-gray-100 transition-colors rounded-sm border border-gray-100">
-                      <div className="w-2 h-2 mt-2 bg-brand-primary rounded-full shrink-0"></div>
+                    <div key={idx} className="flex items-start gap-4 p-5 bg-gray-50 hover:bg-gray-100 transition-colors rounded-sm border border-gray-100">
+                      <div className="w-2.5 h-2.5 mt-2 bg-brand-primary rounded-full shrink-0"></div>
                       <div>
-                        <h4 className="font-medium text-ui-dark mb-1">
+                        {/* 2. Subimos el día/hora a text-lg */}
+                        <h4 className="font-medium text-lg text-ui-dark mb-1">
                           {item.dia} — {item.hora}
                         </h4>
-                        <p className="text-ui-muted text-sm">
-                          {item.actividad} <span className="font-medium text-gray-500">({item.ubicacion})</span>
+                        {/* 3. Subimos la descripción de text-sm a text-base sm:text-lg */}
+                        <p className="text-gray-600 text-base sm:text-lg leading-snug">
+                          {item.actividad} <span className="font-semibold text-gray-700">({item.ubicacion})</span>
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-ui-muted italic p-4">No hay actividades programadas en semana.</p>
+                  <p className="text-ui-muted italic p-4 text-base">No hay actividades programadas en semana.</p>
                 )}
               </div>
             </div>

@@ -30,3 +30,9 @@
     @apply font-manofa font-normal tracking-wide;
   }
 }
+
+/* Aumenta la legibilidad de todos los párrafos en celulares y pantallas */
+main p, footer p, footer li {
+  font-size: 1.08rem !important; /* Equivalente a un punto medio entre text-base y text-lg */
+  line-height: 1.65 !important;
+}
