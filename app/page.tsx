@@ -36,31 +36,33 @@ export default async function Home() {
           Tu navegador no soporta videos HTML5.
         </video>
 
-        {/* Filtro oscuro para garantizar la lectura de las letras blancas */}
-        <div className="absolute inset-0 bg-black/70 z-0"></div>
+        {/* Filtro oscuro inteligente: Gradiente vertical (oscuro en los bordes, claro en el centro) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-black/80 z-0"></div>
 
         {/* Contenido (Textos, botón y dirección) */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
-          <h1 className="text-4xl md:text-6xl font-manofa mb-6 text-white leading-tight">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center mt-8">
+
+          {/* Sombras intensas (drop-shadow) para que el texto resalte sobre el video claro */}
+          <h1 className="text-4xl md:text-6xl font-manofa mb-6 text-white leading-tight drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)]">
             Una comunidad reformada <br className="hidden md:block" />
-            en <span className="text-[#DEA6AB]">Manizales</span>
+            en <span className="text-[#DEA6AB] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Manizales</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-gray-100 mb-10 max-w-3xl mx-auto leading-relaxed font-medium drop-shadow-[0_3px_5px_rgba(0,0,0,0.9)]">
             Donde el centro de absolutamente todo es Jesucristo y su obra en la cruz.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href="/visitanos"
-              className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white font-medium text-lg rounded-sm hover:bg-brand-secondary transition-all shadow-lg hover:shadow-xl"
+              className="w-full sm:w-auto px-8 py-4 bg-brand-primary text-white font-medium text-lg rounded-sm hover:bg-brand-secondary transition-all shadow-xl hover:shadow-2xl"
             >
               Visítanos
             </a>
           </div>
 
           {/* Dirección Clicable a Google Maps */}
-          <div className="pt-12 text-sm text-gray-400 flex items-center justify-center gap-2">
+          <div className="pt-12 text-sm text-gray-300 flex items-center justify-center gap-2 drop-shadow-md">
             <svg className="w-5 h-5 text-brand-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -69,7 +71,7 @@ export default async function Home() {
               href="https://maps.google.com/?q=Edificio+Cootilca,+Calle+44+%2323-52,+Manizales"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white hover:underline transition-colors"
+              className="hover:text-white hover:underline transition-colors font-medium"
             >
               Calle 44 No. 23-52 Piso 3, Edificio Cootilca
             </a>
