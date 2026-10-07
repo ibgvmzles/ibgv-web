@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { CALENDARIO_ORACION } from '@/lib/calendarioOracion';
 
-// --- LÓGICA IMPORTADA DE TU SCRIPT ORIGINAL ---
+// --- LÓGICA DEL PLAN DE LECTURA ---
 const ANTIGUO_TESTAMENTO = [
   { nombre: "Génesis", cap: 50 }, { nombre: "Éxodo", cap: 40 }, { nombre: "Levítico", cap: 27 },
   { nombre: "Números", cap: 36 }, { nombre: "Deuteronomio", cap: 34 }, { nombre: "Josué", cap: 24 },
@@ -33,121 +34,166 @@ const NUEVO_TESTAMENTO = [
 ];
 
 function generarPlan() {
-  let plan = [];
-  let fechaActual = new Date(2026, 1, 1);
+  const plan = [];
+  const fechaActual = new Date(2026, 1, 1);
   const fechaFin = new Date(2026, 11, 31);
-  let atPointer = { bookIdx: 3, capIdx: 7 };
-  let ntPointer = { bookIdx: 5, capIdx: 7 };
+  const atPointer = { bookIdx: 3, capIdx: 7 };
+  const ntPointer = { bookIdx: 5, capIdx: 7 };
   let salmoIdx = 124;
 
   while (fechaActual <= fechaFin) {
-      let options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
-      let fechaStr = new Intl.DateTimeFormat('es-CO', options).format(fechaActual);
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+    const fechaStr = new Intl.DateTimeFormat('es-CO', options).format(fechaActual);
 
-      let diaLectura = {
-          id: fechaActual.toISOString().split('T')[0],
-          fecha: fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1),
-          lecturas: [] as string[]
-      };
+    const diaLectura = {
+      id: fechaActual.toISOString().split('T')[0],
+      fecha: fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1),
+      lecturas: [] as string[]
+    };
 
-      let huboResetHoy = false;
-      let capsAtHoy = (salmoIdx <= 150) ? 1 : 2;
+    let huboResetHoy = false;
+    const capsAtHoy = (salmoIdx <= 150) ? 1 : 2;
 
-      let lecturasATHoy = [];
-      for (let i = 0; i < capsAtHoy; i++) {
-          let libroAT = ANTIGUO_TESTAMENTO[atPointer.bookIdx];
-          lecturasATHoy.push({ nombre: libroAT.nombre, cap: atPointer.capIdx });
-          atPointer.capIdx++;
-          if (atPointer.capIdx > libroAT.cap) {
-              atPointer.bookIdx++;
-              atPointer.capIdx = 1;
-              if (atPointer.bookIdx >= ANTIGUO_TESTAMENTO.length) {
-                  atPointer.bookIdx = 0; atPointer.capIdx = 1;
-                  if (salmoIdx > 150) { salmoIdx = 1; huboResetHoy = true; break; }
-              }
+    const lecturasATHoy = [];
+    for (let i = 0; i < capsAtHoy; i++) {
+      const libroAT = ANTIGUO_TESTAMENTO[atPointer.bookIdx];
+      lecturasATHoy.push({ nombre: libroAT.nombre, cap: atPointer.capIdx });
+      atPointer.capIdx++;
+      if (atPointer.capIdx > libroAT.cap) {
+        atPointer.bookIdx++;
+        atPointer.capIdx = 1;
+        if (atPointer.bookIdx >= ANTIGUO_TESTAMENTO.length) {
+          atPointer.bookIdx = 0;
+          atPointer.capIdx = 1;
+          if (salmoIdx > 150) {
+            salmoIdx = 1;
+            huboResetHoy = true;
+            break;
           }
+        }
       }
+    }
 
-      if (lecturasATHoy.length > 0) {
-          if (lecturasATHoy.length === 1) {
-              diaLectura.lecturas.push(`AT: ${lecturasATHoy[0].nombre} ${lecturasATHoy[0].cap}`);
-          } else {
-              let primero = lecturasATHoy[0];
-              let ultimo = lecturasATHoy[lecturasATHoy.length - 1];
-              if (primero.nombre === ultimo.nombre) {
-                  diaLectura.lecturas.push(`AT: ${primero.nombre} ${primero.cap}-${ultimo.cap}`);
-              } else {
-                  let textoCombinado = lecturasATHoy.map(l => `${l.nombre} ${l.cap}`).join(', ');
-                  diaLectura.lecturas.push(`AT: ${textoCombinado}`);
-              }
-          }
+    if (lecturasATHoy.length > 0) {
+      if (lecturasATHoy.length === 1) {
+        diaLectura.lecturas.push(`${lecturasATHoy[0].nombre} ${lecturasATHoy[0].cap}`);
+      } else {
+        const primero = lecturasATHoy[0];
+        const ultimo = lecturasATHoy[lecturasATHoy.length - 1];
+        if (primero.nombre === ultimo.nombre) {
+          diaLectura.lecturas.push(`${primero.nombre} ${primero.cap}-${ultimo.cap}`);
+        } else {
+          const textoCombinado = lecturasATHoy.map(l => `${l.nombre} ${l.cap}`).join(', ');
+          diaLectura.lecturas.push(textoCombinado);
+        }
       }
+    }
 
-      if (salmoIdx <= 150 && !huboResetHoy) { diaLectura.lecturas.push(`Salmo ${salmoIdx}`); salmoIdx++; }
-      let diaMes = fechaActual.getDate();
-      diaLectura.lecturas.push(`Proverbios ${diaMes}`);
-      let libroNT = NUEVO_TESTAMENTO[ntPointer.bookIdx];
-      diaLectura.lecturas.push(`NT: ${libroNT.nombre} ${ntPointer.capIdx}`);
-      ntPointer.capIdx++;
-      if (ntPointer.capIdx > libroNT.cap) {
-          ntPointer.bookIdx++; ntPointer.capIdx = 1;
-          if (ntPointer.bookIdx >= NUEVO_TESTAMENTO.length) { ntPointer.bookIdx = 0; ntPointer.capIdx = 1; }
+    if (salmoIdx <= 150 && !huboResetHoy) {
+      diaLectura.lecturas.push(`Salmo ${salmoIdx}`);
+      salmoIdx++;
+    }
+    const diaMes = fechaActual.getDate();
+    diaLectura.lecturas.push(`Proverbios ${diaMes}`);
+    const libroNT = NUEVO_TESTAMENTO[ntPointer.bookIdx];
+    diaLectura.lecturas.push(`${libroNT.nombre} ${ntPointer.capIdx}`);
+    ntPointer.capIdx++;
+    if (ntPointer.capIdx > libroNT.cap) {
+      ntPointer.bookIdx++;
+      ntPointer.capIdx = 1;
+      if (ntPointer.bookIdx >= NUEVO_TESTAMENTO.length) {
+        ntPointer.bookIdx = 0;
+        ntPointer.capIdx = 1;
       }
+    }
 
-      plan.push(diaLectura);
-      fechaActual.setDate(fechaActual.getDate() + 1);
+    plan.push(diaLectura);
+    fechaActual.setDate(fechaActual.getDate() + 1);
   }
   return plan;
 }
 
 export default function DailyReading() {
-  const [todayReading, setTodayReading] = useState<{ id: string; fecha: string; lecturas: string[] } | null>(null);
+  const [lecturaHoy, setLecturaHoy] = useState<{ fecha: string; lecturas: string[] } | null>(null);
+  const [motivosOracion, setMotivosOracion] = useState<string[]>([]);
 
   useEffect(() => {
     const plan = generarPlan();
-    // Obtenemos la fecha de hoy local del usuario
+
+    // Fecha actual en Colombia (YYYY-MM-DD)
     const todayStr = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Bogota',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     }).format(new Date());
-    const found = plan.find(d => d.id === todayStr);
 
-    if (found) {
-      setTodayReading(found);
+    // Motivos de oración según el día del mes (1 al 31)
+    const diaDelMes = parseInt(todayStr.split('-')[2], 10);
+    if (CALENDARIO_ORACION[diaDelMes]) {
+      setMotivosOracion(CALENDARIO_ORACION[diaDelMes]);
+    }
+
+    const encontrada = plan.find(d => d.id === todayStr);
+    if (encontrada) {
+      setLecturaHoy(encontrada);
     }
   }, []);
 
-  if (!todayReading) return null; // Si no hay lectura hoy, no mostramos nada
-
-  const lecturasLimpias = todayReading.lecturas.map(l => l.replace('AT: ', '').replace('NT: ', ''));
+  if (!lecturaHoy) return null;
 
   return (
-    <div className="bg-ui-bg border border-gray-100 rounded-sm p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+    <div className="bg-white border-l-4 border-brand-primary p-6 sm:p-8 rounded-sm shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="z-10 flex-1 w-full">
+        <span className="text-xs font-oswald uppercase tracking-widest text-brand-accent font-semibold block mb-1">
+          Plan de Lectura Bíblica • {lecturaHoy.fecha}
+        </span>
+        <h3 className="font-manofa text-2xl sm:text-3xl text-ui-dark uppercase mb-4">
+          Lectura de Hoy
+        </h3>
 
-      {/* Detalle visual de fondo (Marca de agua centrada) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-48 md:w-64 h-48 md:h-64 opacity-[0.07] pointer-events-none select-none z-0">
-        <img
-          src="/icon.png"
-          alt="Marca de agua"
-          className="w-full h-full object-contain"
-        />
+        {/* Pasajes del día */}
+        <div className="flex flex-wrap gap-2 mb-5">
+          {lecturaHoy.lecturas.map((pasaje, index) => (
+            <span
+              key={index}
+              className="bg-ui-bg text-brand-primary font-oswald px-3.5 py-1.5 rounded-sm text-base font-medium border border-gray-200"
+            >
+              {pasaje}
+            </span>
+          ))}
+        </div>
+
+        {/* Sección de Oración del Día */}
+        {motivosOracion.length > 0 && (
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-brand-primary font-oswald text-sm uppercase tracking-wider font-semibold mb-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <span>Hoy oramos por:</span>
+            </div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 font-oswald text-base text-gray-700">
+              {motivosOracion.map((motivo, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-brand-accent mt-2 flex-shrink-0" />
+                  <span>{motivo}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
-      <div className="z-10 text-center md:text-left">
-        <h3 className="font-manofa text-2xl text-ui-dark mb-1">Lectura de <span className="text-[#DEA6AB]">Hoy</span></h3>
-        <p className="text-sm font-bold text-ui-muted uppercase tracking-wide mb-3">{todayReading.fecha}</p>
-        <p className="font-oswald text-lg text-ui-dark">{todayReading.lecturas.join(' • ')}</p>
-      </div>
-
+      {/* Botón hacia la página de lectura */}
       <div className="z-10 flex-shrink-0 w-full md:w-auto">
-        {/* Cambiamos la etiqueta <a> externa por un <Link> interno de Next.js */}
         <Link
           href="/lectura"
-          className="flex items-center justify-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-sm hover:bg-brand-secondary transition-colors font-medium w-full shadow-md hover:shadow-lg"
+          className="flex items-center justify-center gap-2 bg-brand-primary text-white px-6 py-3.5 rounded-sm hover:bg-brand-secondary transition-colors font-oswald font-medium text-lg w-full shadow-md hover:shadow-lg"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
           Leer pasajes
         </Link>
       </div>
