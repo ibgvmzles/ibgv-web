@@ -4,6 +4,10 @@ import Link from 'next/link';
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
+  const whatsappMsg = encodeURIComponent(
+    "¡Hola! Estuve visitando la página web de la Iglesia Bíblica Gracia Verdadera y me gustaría recibir más información para acompañarlos."
+  );
+
   return (
     <footer className="bg-ui-dark text-gray-300 py-16 border-t-4 border-brand-primary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +24,7 @@ export default function Footer() {
                 className="h-16 w-auto"
               />
             </Link>
-            <p className="text-sm text-gray-400 leading-relaxed">
+            <p className="text-base text-gray-400 leading-relaxed">
               Una comunidad reformada en Manizales donde el centro de absolutamente todo es Jesucristo y su obra en la cruz.
             </p>
           </div>
@@ -28,7 +32,7 @@ export default function Footer() {
           {/* Columna 2: Navegación Rápida */}
           <div>
             <h3 className="text-white font-manofa text-xl tracking-wider uppercase mb-6">Explorar</h3>
-            <ul className="space-y-3 text-sm">
+            <ul className="space-y-3 text-base">
               <li>
                 <Link href="/" className="hover:text-brand-light transition-colors">Inicio</Link>
               </li>
@@ -47,21 +51,37 @@ export default function Footer() {
           {/* Columna 3: Contacto y Ubicación */}
           <div>
             <h3 className="text-white font-manofa text-xl tracking-wider uppercase mb-6">Visítanos</h3>
-            <ul className="space-y-4 text-sm text-gray-400">
+            <ul className="space-y-4 text-base text-gray-400">
               <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-brand-primary shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>Calle 44 No. 23-52 Piso 3<br/>Edificio Cootilca<br/>Manizales, Colombia</span>
+                <span className="leading-relaxed">Calle 44 No. 23-52 Piso 3<br/>Edificio Cootilca<br/>Manizales, Colombia</span>
               </li>
-              <li className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-brand-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <li className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-brand-primary shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <div className="flex flex-col">
-                  <span>322 366 4386</span>
-                  <span>301 601 2415</span>
+                <div className="flex flex-col space-y-2">
+                  <a
+                    href={`https://wa.me/573223664386?text=${whatsappMsg}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white hover:underline transition-colors flex items-center gap-2"
+                  >
+                    <span>322 366 4386</span>
+                    <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded-sm">WhatsApp</span>
+                  </a>
+                  <a
+                    href={`https://wa.me/573016012415?text=${whatsappMsg}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white hover:underline transition-colors flex items-center gap-2"
+                  >
+                    <span>301 601 2415</span>
+                    <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded-sm">WhatsApp</span>
+                  </a>
                 </div>
               </li>
             </ul>
@@ -89,7 +109,7 @@ export default function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="border-t border-gray-800 mt-12 pt-8 text-center text-sm text-gray-500">
+        <div className="border-t border-gray-800 mt-12 pt-8 text-center text-base text-gray-500">
           <p>&copy; {currentYear} Iglesia Bíblica Gracia Verdadera. Todos los derechos reservados.</p>
         </div>
       </div>
