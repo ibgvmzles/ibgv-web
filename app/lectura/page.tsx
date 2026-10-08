@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CALENDARIO_ORACION } from '@/lib/calendarioOracion';
@@ -34,10 +34,10 @@ const NUEVO_TESTAMENTO = [
   { nombre: "3 Juan", cap: 1 }, { nombre: "Judas", cap: 1 }, { nombre: "Apocalipsis", cap: 22 }
 ];
 
-// Clave de almacenamiento local en el navegador del usuario
 const STORAGE_KEY = 'ibgv_lecturas_completadas_v1';
 
-// Función para restar días a una fecha YYYY-MM-DD sin errores de zona horaria
+type NeuralVoice = 'es-MX-JorgeNeural' | 'es-US-AlonsoNeural' | 'es-MX-DaliaNeural';
+
 function restarUnDia(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -45,7 +45,6 @@ function restarUnDia(dateStr: string): string {
   return dt.toISOString().split('T')[0];
 }
 
-// Calcula el total de días completados y la racha actual
 function calcularEstadisticasRacha(fechasCompletadas: string[], todayStr: string) {
   const setFechas = new Set(fechasCompletadas);
   const totalDias = setFechas.size;
@@ -153,16 +152,27 @@ export default function PaginaLectura() {
   const [todayIso, setTodayIso] = useState('');
   const [motivosOracion, setMotivosOracion] = useState<string[]>([]);
 
-  // Estados para el medidor de racha y días completados
+  // Estados para racha
   const [diasCompletados, setDiasCompletados] = useState(0);
   const [rachaActual, setRachaActual] = useState(0);
   const [completadoHoy, setCompletadoHoy] = useState(false);
+
+  // --- ESTADOS Y REFS PARA VOZ NEURAL ---
+  const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
+  const [selectedVoice, setSelectedVoice] = useState<NeuralVoice>('es-MX-JorgeNeural');
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
+  const [currentChunkIdx, setCurrentChunkIdx] = useState(0);
+  const [totalChunks, setTotalChunks] = useState(0);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const chunksRef = useRef<string[]>([]);
+  const audioCacheRef = useRef<Map<string, string>>(new Map());
+  const isCancelledRef = useRef<boolean>(false);
 
   useEffect(() => {
     const fetchLectura = async () => {
       const plan = generarPlan();
 
-      // Fecha actual en zona horaria de Colombia (YYYY-MM-DD)
       const todayStr = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Bogota',
         year: 'numeric',
@@ -172,7 +182,6 @@ export default function PaginaLectura() {
 
       setTodayIso(todayStr);
 
-      // Cargamos el historial de lectura desde localStorage
       try {
         const guardado = localStorage.getItem(STORAGE_KEY);
         const listaFechas: string[] = guardado ? JSON.parse(guardado) : [];
@@ -184,7 +193,6 @@ export default function PaginaLectura() {
         console.error('Error leyendo racha en localStorage:', e);
       }
 
-      // Extraemos el día del mes (1 al 31) para cargar los motivos de oración
       const diaDelMes = parseInt(todayStr.split('-')[2], 10);
       if (CALENDARIO_ORACION[diaDelMes]) {
         setMotivosOracion(CALENDARIO_ORACION[diaDelMes]);
@@ -212,9 +220,171 @@ export default function PaginaLectura() {
     };
 
     fetchLectura();
+
+    return () => {
+      detenerAudio();
+    };
   }, []);
 
-  // Función para marcar o desmarcar la lectura del día
+  // Extrae el texto limpio sin números de versículos y lo divide en bloques ágiles (~1200 caracteres)
+  const prepararFragmentosDeLectura = (): string[] => {
+    if (!htmlContent) return [];
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+
+    // Quitamos los numeritos de versículo (.v) para que no interrumpan las frases
+    tempDiv.querySelectorAll('.v').forEach(el => el.remove());
+
+    // Convertimos números de capítulo (.c) en pausa hablada ("Capítulo X.")
+    tempDiv.querySelectorAll('.c').forEach(el => {
+      el.textContent = ` Capítulo ${el.textContent?.trim()}. `;
+    });
+
+    // Aseguramos pausa en títulos y subtítulos
+    tempDiv.querySelectorAll('h2, h3, .s').forEach(el => {
+      el.textContent = ` ${el.textContent?.trim()}. `;
+    });
+
+    const rawText = (tempDiv.textContent || tempDiv.innerText || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const oraciones = rawText.match(/[^.!?]+[.!?]+/g) || [rawText];
+    const bloques: string[] = [];
+    let bloqueActual = '';
+
+    for (const oracion of oraciones) {
+      if ((bloqueActual + ' ' + oracion).length > 1100 && bloqueActual.length > 0) {
+        bloques.push(bloqueActual.trim());
+        bloqueActual = oracion;
+      } else {
+        bloqueActual += ' ' + oracion;
+      }
+    }
+    if (bloqueActual.trim().length > 0) {
+      bloques.push(bloqueActual.trim());
+    }
+
+    return bloques;
+  };
+
+  // Descarga un fragmento desde nuestra API /api/tts (y lo guarda en memoria por si lo repite)
+  const obtenerAudioUrlDeFragmento = async (index: number, voice: string): Promise<string | null> => {
+    const texto = chunksRef.current[index];
+    if (!texto) return null;
+
+    const cacheKey = `${voice}_${index}`;
+    if (audioCacheRef.current.has(cacheKey)) {
+      return audioCacheRef.current.get(cacheKey)!;
+    }
+
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: texto, voice }),
+    });
+
+    if (!res.ok) throw new Error('Error en servidor TTS');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    audioCacheRef.current.set(cacheKey, url);
+    return url;
+  };
+
+  // Reproduce un bloque y pre-carga el siguiente en segundo plano
+  const reproducirFragmento = async (index: number, voice: string) => {
+    if (isCancelledRef.current) return;
+
+    if (index >= chunksRef.current.length) {
+      setAudioStatus('idle');
+      setCurrentChunkIdx(0);
+      return;
+    }
+
+    setCurrentChunkIdx(index);
+    setAudioStatus('loading');
+
+    try {
+      const audioUrl = await obtenerAudioUrlDeFragmento(index, voice);
+      if (isCancelledRef.current || !audioUrl) return;
+
+      // Pre-cargamos el siguiente bloque silenciosamente mientras suena el actual
+      if (index + 1 < chunksRef.current.length) {
+        obtenerAudioUrlDeFragmento(index + 1, voice).catch(() => {});
+      }
+
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
+
+      audioRef.current.src = audioUrl;
+      audioRef.current.playbackRate = playbackSpeed;
+
+      audioRef.current.onended = () => {
+        if (!isCancelledRef.current) {
+          reproducirFragmento(index + 1, voice);
+        }
+      };
+
+      await audioRef.current.play();
+      setAudioStatus('playing');
+    } catch (error) {
+      console.error('Error reproduciendo audio neural:', error);
+      setAudioStatus('idle');
+    }
+  };
+
+  const handlePlayPauseAudio = () => {
+    if (audioStatus === 'playing') {
+      audioRef.current?.pause();
+      setAudioStatus('paused');
+      return;
+    }
+
+    if (audioStatus === 'paused' && audioRef.current) {
+      audioRef.current.play();
+      setAudioStatus('playing');
+      return;
+    }
+
+    // Inicia desde cero o desde el fragmento actual
+    isCancelledRef.current = false;
+    if (chunksRef.current.length === 0) {
+      const generados = prepararFragmentosDeLectura();
+      chunksRef.current = generados;
+      setTotalChunks(generados.length);
+    }
+
+    reproducirFragmento(currentChunkIdx, selectedVoice);
+  };
+
+  const detenerAudio = () => {
+    isCancelledRef.current = true;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setAudioStatus('idle');
+    setCurrentChunkIdx(0);
+  };
+
+  const cambiarVoz = (nuevaVoz: NeuralVoice) => {
+    setSelectedVoice(nuevaVoz);
+    if (audioStatus === 'playing' || audioStatus === 'paused') {
+      if (audioRef.current) audioRef.current.pause();
+      isCancelledRef.current = false;
+      reproducirFragmento(currentChunkIdx, nuevaVoz);
+    }
+  };
+
+  const cambiarVelocidad = (nuevaVel: number) => {
+    setPlaybackSpeed(nuevaVel);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nuevaVel;
+    }
+  };
+
   const toggleLecturaHoy = (forzarCompletado?: boolean) => {
     if (!todayIso) return;
     try {
@@ -242,8 +412,8 @@ export default function PaginaLectura() {
     }
   };
 
-  // Acción del botón final: marca como completado y regresa al inicio tras una breve pausa
   const handleFinalizarAbajo = () => {
+    detenerAudio();
     toggleLecturaHoy(true);
     setTimeout(() => {
       router.push('/');
@@ -332,9 +502,8 @@ export default function PaginaLectura() {
         {/* =========================================
             MEDIDOR DE PROGRESO Y RACHA (Con Casilla Rápida)
             ========================================= */}
-        <section className="mb-10 font-oswald">
+        <section className="mb-6 font-oswald">
           <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
-            {/* Tarjeta 1: Días Completados */}
             <div
               className={`p-5 sm:p-6 rounded-xl shadow-xs border text-center transition-colors duration-500 ${
                 isSepia ? 'bg-[#f4e3c5]/80 border-[#e4cfa6]' : 'bg-white border-gray-100'
@@ -348,7 +517,6 @@ export default function PaginaLectura() {
               </span>
             </div>
 
-            {/* Tarjeta 2: Racha Actual */}
             <div
               className={`p-5 sm:p-6 rounded-xl shadow-xs border text-center transition-colors duration-500 ${
                 isSepia ? 'bg-[#f4e3c5]/80 border-[#e4cfa6]' : 'bg-white border-gray-100'
@@ -368,7 +536,7 @@ export default function PaginaLectura() {
             </div>
           </div>
 
-          {/* Casilla superior para confirmar lectura de hoy */}
+          {/* Casilla superior para confirmar lectura */}
           <button
             type="button"
             onClick={() => toggleLecturaHoy()}
@@ -408,6 +576,138 @@ export default function PaginaLectura() {
             )}
           </button>
         </section>
+
+        {/* =========================================
+            REPRODUCTOR DE VOZ NEURAL GUIADA
+            ========================================= */}
+        {!loading && htmlContent && (
+          <section
+            className={`mb-10 p-4 sm:p-5 rounded-xl border font-oswald transition-colors duration-500 ${
+              isSepia ? 'bg-[#f4e3c5]/90 border-[#e4cfa6]' : 'bg-white border-gray-200 shadow-xs'
+            }`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Botones Principales de Audio */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handlePlayPauseAudio}
+                  disabled={audioStatus === 'loading'}
+                  className={`inline-flex items-center gap-2.5 px-5 py-2.5 rounded-sm font-medium text-white shadow-sm transition-all cursor-pointer ${
+                    audioStatus === 'playing'
+                      ? 'bg-amber-600 hover:bg-amber-700'
+                      : 'bg-brand-primary hover:bg-brand-secondary'
+                  } disabled:opacity-70`}
+                >
+                  {audioStatus === 'loading' ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Preparando voz neural...</span>
+                    </>
+                  ) : audioStatus === 'playing' ? (
+                    <>
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                      </svg>
+                      <span>Pausar lectura</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      <span>{audioStatus === 'paused' ? 'Reanudar lectura' : 'Escuchar lectura guiada'}</span>
+                    </>
+                  )}
+                </button>
+
+                {(audioStatus === 'playing' || audioStatus === 'paused') && (
+                  <button
+                    type="button"
+                    onClick={detenerAudio}
+                    className="px-3 py-2 text-sm text-gray-600 hover:text-red-700 font-medium transition-colors cursor-pointer"
+                  >
+                    Reiniciar
+                  </button>
+                )}
+              </div>
+
+              {/* Selectores de Narrador Neutro y Velocidad */}
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs uppercase tracking-wider text-gray-400">Voz:</span>
+                  <div className="flex bg-black/5 rounded-xs p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => cambiarVoz('es-MX-JorgeNeural')}
+                      className={`px-2.5 py-1 rounded-xs text-xs font-medium transition-colors cursor-pointer ${
+                        selectedVoice === 'es-MX-JorgeNeural'
+                          ? 'bg-white text-brand-primary shadow-2xs'
+                          : 'text-gray-600 hover:text-ui-dark'
+                      }`}
+                    >
+                      Jorge (Neutro)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cambiarVoz('es-US-AlonsoNeural')}
+                      className={`px-2.5 py-1 rounded-xs text-xs font-medium transition-colors cursor-pointer ${
+                        selectedVoice === 'es-US-AlonsoNeural'
+                          ? 'bg-white text-brand-primary shadow-2xs'
+                          : 'text-gray-600 hover:text-ui-dark'
+                      }`}
+                    >
+                      Alonso (Profundo)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cambiarVoz('es-MX-DaliaNeural')}
+                      className={`px-2.5 py-1 rounded-xs text-xs font-medium transition-colors cursor-pointer ${
+                        selectedVoice === 'es-MX-DaliaNeural'
+                          ? 'bg-white text-brand-primary shadow-2xs'
+                          : 'text-gray-600 hover:text-ui-dark'
+                      }`}
+                    >
+                      Dalia
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs uppercase tracking-wider text-gray-400">Ritmo:</span>
+                  <select
+                    value={playbackSpeed}
+                    onChange={(e) => cambiarVelocidad(parseFloat(e.target.value))}
+                    className="bg-black/5 rounded-xs px-2 py-1 text-xs text-ui-dark font-medium focus:outline-none cursor-pointer"
+                  >
+                    <option value={0.85}>Muy pausado (0.85x)</option>
+                    <option value={0.92}>Pausado (0.92x)</option>
+                    <option value={1.0}>Normal (1.0x)</option>
+                    <option value={1.1}>Ágil (1.1x)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de avance por secciones cuando está activo */}
+            {totalChunks > 0 && (audioStatus === 'playing' || audioStatus === 'paused' || audioStatus === 'loading') && (
+              <div className="mt-3 pt-3 border-t border-black/5 flex items-center justify-between gap-3 text-xs text-gray-500">
+                <span>
+                  Narrando sección {currentChunkIdx + 1} de {totalChunks}
+                </span>
+                <div className="flex-1 max-w-xs h-1.5 bg-black/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-brand-primary transition-all duration-300"
+                    style={{ width: `${Math.round(((currentChunkIdx + 1) / totalChunks) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Contenedor Principal */}
         {loading ? (
@@ -460,7 +760,7 @@ export default function PaginaLectura() {
               </section>
             )}
 
-            {/* Botón de Finalización (Guarda la racha y redirige al inicio) */}
+            {/* Botón de Finalización */}
             <div className="mt-12 pt-8 border-t border-gray-200/50 text-center pb-12 font-oswald">
               <button
                 type="button"
