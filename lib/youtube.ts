@@ -109,13 +109,26 @@ export async function getAllPlaylists(): Promise<YouTubePlaylist[]> {
     const data = await res.json();
     if (!data.items || data.items.length === 0) return [];
 
-    return data.items.map((item: any) => ({
-      id: item.id,
-      title: item.snippet.title,
-      thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
-      itemCount: item.contentDetails.itemCount,
-      publishedAt: item.snippet.publishedAt,
-    }));
+    // Obtenemos las listas y buscamos en paralelo la fecha real de su video más reciente
+    const playlistsWithLatestDate = await Promise.all(
+      data.items.map(async (item: any) => {
+        const latestVideo = await getLatestVideoByPlaylistId(item.id);
+
+        return {
+          id: item.id,
+          title: item.snippet.title,
+          thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+          itemCount: item.contentDetails.itemCount,
+          // Usamos la fecha del último video subido a esa lista; si está vacía, usamos la fecha de la lista
+          publishedAt: latestVideo?.rawDate || item.snippet.publishedAt,
+        };
+      })
+    );
+
+    // Las devolvemos ya ordenadas de la más reciente a la más antigua según su último video
+    return playlistsWithLatestDate.sort((a, b) => {
+      return new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime();
+    });
   } catch (error) {
     console.error('Error en getAllPlaylists:', error);
     return [];
