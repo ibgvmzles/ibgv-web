@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CALENDARIO_ORACION } from '@/lib/calendarioOracion';
 
 // --- LÓGICA DEL PLAN DE LECTURA ---
@@ -32,6 +33,34 @@ const NUEVO_TESTAMENTO = [
   { nombre: "2 Pedro", cap: 3 }, { nombre: "1 Juan", cap: 5 }, { nombre: "2 Juan", cap: 1 },
   { nombre: "3 Juan", cap: 1 }, { nombre: "Judas", cap: 1 }, { nombre: "Apocalipsis", cap: 22 }
 ];
+
+// Clave de almacenamiento local en el navegador del usuario
+const STORAGE_KEY = 'ibgv_lecturas_completadas_v1';
+
+// Función para restar días a una fecha YYYY-MM-DD sin errores de zona horaria
+function restarUnDia(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.toISOString().split('T')[0];
+}
+
+// Calcula el total de días completados y la racha actual
+function calcularEstadisticasRacha(fechasCompletadas: string[], todayStr: string) {
+  const setFechas = new Set(fechasCompletadas);
+  const totalDias = setFechas.size;
+  const completadoHoy = setFechas.has(todayStr);
+
+  let racha = 0;
+  let cursor = completadoHoy ? todayStr : restarUnDia(todayStr);
+
+  while (setFechas.has(cursor)) {
+    racha++;
+    cursor = restarUnDia(cursor);
+  }
+
+  return { totalDias, racha, completadoHoy };
+}
 
 function generarPlan() {
   const plan = [];
@@ -114,13 +143,20 @@ function generarPlan() {
 }
 
 export default function PaginaLectura() {
+  const router = useRouter();
   const [htmlContent, setHtmlContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isXLarge, setIsXLarge] = useState(false);
   const [isSepia, setIsSepia] = useState(false);
   const [isClassicFont, setIsClassicFont] = useState(true);
   const [fechaHoy, setFechaHoy] = useState('');
+  const [todayIso, setTodayIso] = useState('');
   const [motivosOracion, setMotivosOracion] = useState<string[]>([]);
+
+  // Estados para el medidor de racha y días completados
+  const [diasCompletados, setDiasCompletados] = useState(0);
+  const [rachaActual, setRachaActual] = useState(0);
+  const [completadoHoy, setCompletadoHoy] = useState(false);
 
   useEffect(() => {
     const fetchLectura = async () => {
@@ -133,6 +169,20 @@ export default function PaginaLectura() {
         month: '2-digit',
         day: '2-digit'
       }).format(new Date());
+
+      setTodayIso(todayStr);
+
+      // Cargamos el historial de lectura desde localStorage
+      try {
+        const guardado = localStorage.getItem(STORAGE_KEY);
+        const listaFechas: string[] = guardado ? JSON.parse(guardado) : [];
+        const stats = calcularEstadisticasRacha(listaFechas, todayStr);
+        setDiasCompletados(stats.totalDias);
+        setRachaActual(stats.racha);
+        setCompletadoHoy(stats.completadoHoy);
+      } catch (e) {
+        console.error('Error leyendo racha en localStorage:', e);
+      }
 
       // Extraemos el día del mes (1 al 31) para cargar los motivos de oración
       const diaDelMes = parseInt(todayStr.split('-')[2], 10);
@@ -164,6 +214,42 @@ export default function PaginaLectura() {
     fetchLectura();
   }, []);
 
+  // Función para marcar o desmarcar la lectura del día
+  const toggleLecturaHoy = (forzarCompletado?: boolean) => {
+    if (!todayIso) return;
+    try {
+      const guardado = localStorage.getItem(STORAGE_KEY);
+      const listaFechas: string[] = guardado ? JSON.parse(guardado) : [];
+      const setFechas = new Set(listaFechas);
+
+      const nuevoEstado = forzarCompletado !== undefined ? forzarCompletado : !setFechas.has(todayIso);
+
+      if (nuevoEstado) {
+        setFechas.add(todayIso);
+      } else {
+        setFechas.delete(todayIso);
+      }
+
+      const nuevoArray = Array.from(setFechas);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nuevoArray));
+
+      const stats = calcularEstadisticasRacha(nuevoArray, todayIso);
+      setDiasCompletados(stats.totalDias);
+      setRachaActual(stats.racha);
+      setCompletadoHoy(stats.completadoHoy);
+    } catch (e) {
+      console.error('Error guardando racha en localStorage:', e);
+    }
+  };
+
+  // Acción del botón final: marca como completado y regresa al inicio tras una breve pausa
+  const handleFinalizarAbajo = () => {
+    toggleLecturaHoy(true);
+    setTimeout(() => {
+      router.push('/');
+    }, 650);
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-500 ${isSepia ? 'bg-[#fbf0d9]' : 'bg-ui-bg'}`}>
       <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -177,7 +263,7 @@ export default function PaginaLectura() {
         </Link>
 
         {/* Encabezado y Controles de UX */}
-        <header className="mb-8 border-b border-gray-200/50 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <header className="mb-6 border-b border-gray-200/50 pb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
             <h1 className="font-manofa text-3xl sm:text-4xl text-ui-dark uppercase">Lectura Diaria</h1>
             <p className="font-oswald text-brand-accent mt-1">{fechaHoy || 'Cargando fecha...'}</p>
@@ -243,6 +329,86 @@ export default function PaginaLectura() {
           </div>
         </header>
 
+        {/* =========================================
+            MEDIDOR DE PROGRESO Y RACHA (Con Casilla Rápida)
+            ========================================= */}
+        <section className="mb-10 font-oswald">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
+            {/* Tarjeta 1: Días Completados */}
+            <div
+              className={`p-5 sm:p-6 rounded-xl shadow-xs border text-center transition-colors duration-500 ${
+                isSepia ? 'bg-[#f4e3c5]/80 border-[#e4cfa6]' : 'bg-white border-gray-100'
+              }`}
+            >
+              <span className="text-xs sm:text-sm font-bold tracking-wider uppercase text-slate-500 block mb-1">
+                Días Completados
+              </span>
+              <span className="text-3xl sm:text-4xl font-bold text-brand-primary">
+                {diasCompletados}
+              </span>
+            </div>
+
+            {/* Tarjeta 2: Racha Actual */}
+            <div
+              className={`p-5 sm:p-6 rounded-xl shadow-xs border text-center transition-colors duration-500 ${
+                isSepia ? 'bg-[#f4e3c5]/80 border-[#e4cfa6]' : 'bg-white border-gray-100'
+              }`}
+            >
+              <span className="text-xs sm:text-sm font-bold tracking-wider uppercase text-slate-500 block mb-1">
+                Racha Actual
+              </span>
+              <div className="flex items-center justify-center gap-1.5">
+                <span className="text-3xl sm:text-4xl font-bold text-brand-primary">
+                  {rachaActual}
+                </span>
+                <span className="text-2xl sm:text-3xl" role="img" aria-label="Fuego">
+                  🔥
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Casilla superior para confirmar lectura de hoy */}
+          <button
+            type="button"
+            onClick={() => toggleLecturaHoy()}
+            className={`w-full py-3 px-4 rounded-lg border flex items-center justify-between transition-all cursor-pointer ${
+              completadoHoy
+                ? 'bg-green-50/90 border-green-300 text-green-900'
+                : isSepia
+                ? 'bg-[#f4e3c5]/50 border-[#e4cfa6] text-ui-dark hover:bg-[#f4e3c5]'
+                : 'bg-white border-gray-200 text-ui-dark hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center gap-3 text-left">
+              <div
+                className={`w-5 h-5 rounded-xs flex items-center justify-center border transition-colors ${
+                  completadoHoy
+                    ? 'bg-green-600 border-green-600 text-white'
+                    : 'border-gray-400 bg-white'
+                }`}
+              >
+                {completadoHoy && (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-sm sm:text-base font-medium">
+                {completadoHoy
+                  ? '¡Lectura de hoy completada! Gracias a Dios por Su Palabra.'
+                  : 'Marcar mi lectura de hoy como completada'}
+              </span>
+            </div>
+
+            {completadoHoy && (
+              <span className="text-xs font-semibold uppercase tracking-wider bg-green-200/70 text-green-800 px-2.5 py-0.5 rounded-full shrink-0">
+                +1 día 🔥
+              </span>
+            )}
+          </button>
+        </section>
+
         {/* Contenedor Principal */}
         {loading ? (
           <div className="flex justify-center items-center h-64 text-brand-light">
@@ -294,13 +460,21 @@ export default function PaginaLectura() {
               </section>
             )}
 
-            {/* Botón de Finalización */}
+            {/* Botón de Finalización (Guarda la racha y redirige al inicio) */}
             <div className="mt-12 pt-8 border-t border-gray-200/50 text-center pb-12 font-oswald">
-              <Link href="/">
-                <button className="bg-brand-primary hover:bg-brand-secondary text-white font-medium py-4 px-8 rounded-sm shadow-md transition-all transform hover:scale-105">
-                  ¡He terminado mi lectura y oración de hoy! 🎉
-                </button>
-              </Link>
+              <button
+                type="button"
+                onClick={handleFinalizarAbajo}
+                className={`font-medium py-4 px-8 rounded-sm shadow-md transition-all transform hover:scale-105 cursor-pointer ${
+                  completadoHoy
+                    ? 'bg-green-700 hover:bg-green-800 text-white'
+                    : 'bg-brand-primary hover:bg-brand-secondary text-white'
+                }`}
+              >
+                {completadoHoy
+                  ? '✅ ¡Lectura y oración registradas hoy! Volver al inicio'
+                  : '¡He terminado mi lectura y oración de hoy! 🎉'}
+              </button>
             </div>
           </>
         )}

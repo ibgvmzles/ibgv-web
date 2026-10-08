@@ -33,6 +33,15 @@ const NUEVO_TESTAMENTO = [
   { nombre: "3 Juan", cap: 1 }, { nombre: "Judas", cap: 1 }, { nombre: "Apocalipsis", cap: 22 }
 ];
 
+const STORAGE_KEY = 'ibgv_lecturas_completadas_v1';
+
+function restarUnDia(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.toISOString().split('T')[0];
+}
+
 function generarPlan() {
   const plan = [];
   const fechaActual = new Date(2026, 1, 1);
@@ -116,6 +125,8 @@ function generarPlan() {
 export default function DailyReading() {
   const [lecturaHoy, setLecturaHoy] = useState<{ fecha: string; lecturas: string[] } | null>(null);
   const [motivosOracion, setMotivosOracion] = useState<string[]>([]);
+  const [racha, setRacha] = useState(0);
+  const [completadoHoy, setCompletadoHoy] = useState(false);
 
   useEffect(() => {
     const plan = generarPlan();
@@ -138,6 +149,26 @@ export default function DailyReading() {
     if (encontrada) {
       setLecturaHoy(encontrada);
     }
+
+    // Leemos la racha de forma silenciosa para mostrar el detalle minimalista
+    try {
+      const guardado = localStorage.getItem(STORAGE_KEY);
+      if (guardado) {
+        const setFechas = new Set<string>(JSON.parse(guardado));
+        const hoyListo = setFechas.has(todayStr);
+        setCompletadoHoy(hoyListo);
+
+        let count = 0;
+        let cursor = hoyListo ? todayStr : restarUnDia(todayStr);
+        while (setFechas.has(cursor)) {
+          count++;
+          cursor = restarUnDia(cursor);
+        }
+        setRacha(count);
+      }
+    } catch (e) {
+      // Silencioso en caso de navegador bloqueando storage
+    }
   }, []);
 
   if (!lecturaHoy) return null;
@@ -145,9 +176,25 @@ export default function DailyReading() {
   return (
     <div className="bg-white border-l-4 border-brand-primary p-6 sm:p-8 rounded-sm shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div className="z-10 flex-1 w-full">
-        <span className="text-xs font-oswald uppercase tracking-widest text-brand-accent font-semibold block mb-1">
-          Plan de Lectura Bíblica • {lecturaHoy.fecha}
-        </span>
+
+        {/* Encabezado superior con insignia minimalista de racha */}
+        <div className="flex flex-wrap items-center gap-2.5 mb-1">
+          <span className="text-xs font-oswald uppercase tracking-widest text-brand-accent font-semibold">
+            Plan de Lectura Bíblica • {lecturaHoy.fecha}
+          </span>
+
+          {/* DETALLE MINIMALISTA DE RACHA (Solo visible o resaltado discretamente) */}
+          <span className="inline-flex items-center gap-1 text-xs font-oswald font-medium bg-orange-50 text-brand-primary border border-orange-200/70 px-2 py-0.5 rounded-full">
+            <span>🔥 {racha} {racha === 1 ? 'día' : 'días'}</span>
+          </span>
+
+          {completadoHoy && (
+            <span className="inline-flex items-center gap-1 text-xs font-oswald font-medium bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+              ✓ Completada hoy
+            </span>
+          )}
+        </div>
+
         <h3 className="font-manofa text-2xl sm:text-3xl text-ui-dark uppercase mb-4">
           Lectura de Hoy
         </h3>
@@ -194,7 +241,7 @@ export default function DailyReading() {
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
           </svg>
-          Leer pasajes
+          {completadoHoy ? 'Repasar lectura' : 'Leer pasajes'}
         </Link>
       </div>
     </div>
