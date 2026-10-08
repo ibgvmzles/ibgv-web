@@ -87,7 +87,7 @@ export default async function Home() {
       </section>
 
       {/* =========================================
-          2. SECCIÓN HORARIOS (Dinámica desde Google Sheets)
+          2. SECCIÓN HORARIOS
           ========================================= */}
       <section id="horarios" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -97,30 +97,55 @@ export default async function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-12 items-start">
+            {/* Tarjeta de Domingos (Textos fijos y estructurados) */}
             <div className="bg-ui-bg p-8 md:p-10 rounded-sm border border-gray-100 shadow-sm">
               <h3 className="text-2xl text-brand-primary mb-6 border-b border-gray-200 pb-4">
-                El Día del Señor
+                Domingos
               </h3>
 
-              {domingos.length > 0 ? (
-                <ul className="space-y-6 text-ui-dark">
-                  {domingos.map((item, idx) => (
-                    <li key={idx} className="flex justify-between items-center border-b border-gray-200/50 pb-2 last:border-0 last:pb-0 gap-4">
-                      <span className="font-medium text-lg sm:text-xl">{item.actividad}</span>
-                      <span className="text-brand-secondary font-medium text-base sm:text-lg shrink-0">{item.hora}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-ui-muted italic text-base">Horarios de domingo por confirmar...</p>
-              )}
+              <ul className="space-y-6 text-ui-dark">
+                {/* 1. Estudio Bíblico */}
+                <li className="border-b border-gray-200/60 pb-5">
+                  <div className="flex justify-between items-baseline gap-4 mb-1.5">
+                    <h4 className="font-medium text-lg sm:text-xl text-ui-dark">
+                      Estudio Bíblico
+                    </h4>
+                    <span className="text-brand-secondary font-medium text-base sm:text-lg shrink-0">
+                      {domingos[0]?.hora || '10:00 A.M.'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                    Un espacio de enseñanza sistemática y doctrinal para profundizar juntos en el conocimiento de las Escrituras.
+                  </p>
+                </li>
 
-              {/* 1. Párrafo de dirección aumentado de text-sm a text-base / text-lg con mejor interlineado */}
-              <p className="mt-8 text-base sm:text-lg text-gray-600 leading-relaxed pt-4 border-t border-gray-200">
-                Nos reunimos en el Edificio Cootilca (Calle 44 No. 23-52 Piso 3) para adorar juntos mediante el canto, la oración y la predicación expositiva.
+                {/* 2. Servicio Dominical */}
+                <li className="pb-2">
+                  <div className="flex justify-between items-baseline gap-4 mb-1.5">
+                    <h4 className="font-medium text-lg sm:text-xl text-ui-dark">
+                      Servicio Dominical
+                    </h4>
+                    <span className="text-brand-secondary font-medium text-base sm:text-lg shrink-0">
+                      {domingos[1]?.hora || '11:00 A.M.'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
+                    Nos reunimos como iglesia para adorar a Dios en comunidad mediante el canto, la oración y la predicación expositiva de Su Palabra.
+                  </p>
+                </li>
+              </ul>
+
+              {/* Nota de dirección al pie de la tarjeta */}
+              <p className="mt-6 text-base sm:text-lg text-gray-600 leading-relaxed pt-4 border-t border-gray-200 flex items-center gap-2">
+                <svg className="w-5 h-5 text-brand-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>Ubicación: <strong>Edificio Cootilca</strong> (Calle 44 No. 23-52 Piso 3)</span>
               </p>
             </div>
 
+            {/* Columna Derecha: Durante la semana (Dinámica desde Google Sheets) */}
             <div>
               <h3 className="text-2xl text-ui-dark mb-6">Durante la semana</h3>
               <div className="space-y-4">
@@ -129,11 +154,9 @@ export default async function Home() {
                     <div key={idx} className="flex items-start gap-4 p-5 bg-gray-50 hover:bg-gray-100 transition-colors rounded-sm border border-gray-100">
                       <div className="w-2.5 h-2.5 mt-2 bg-brand-primary rounded-full shrink-0"></div>
                       <div>
-                        {/* 2. Subimos el día/hora a text-lg */}
                         <h4 className="font-medium text-lg text-ui-dark mb-1">
                           {item.dia} — {item.hora}
                         </h4>
-                        {/* 3. Subimos la descripción de text-sm a text-base sm:text-lg */}
                         <p className="text-gray-600 text-base sm:text-lg leading-snug">
                           {item.actividad} <span className="font-semibold text-gray-700">({item.ubicacion})</span>
                         </p>
