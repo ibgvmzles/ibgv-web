@@ -10,13 +10,14 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
 
-  // 1. Verificamos si estamos exactamente en la página de inicio
+  // 1. Identificamos en qué página estamos
   const isHome = pathname === '/';
+  const isLectura = pathname?.startsWith('/lectura');
 
   // 2. Escuchamos el scroll de la pantalla
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 20) {
+      if (window.scrollY > 30) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -28,9 +29,12 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 3. Definimos cuándo el header debe ser transparente:
-  // Solo en el inicio, solo si estamos arriba del todo, y con el menú móvil cerrado.
-  const isTransparent = isHome && !isScrolled && !isMenuOpen;
+  // 3. Reglas visuales según la página:
+  // - En el Inicio (/): transparente con letras blancas arriba; blanco al hacer scroll.
+  const isHomeTransparent = isHome && !isScrolled && !isMenuOpen;
+  // - En Lectura (/lectura): transparente arriba (para respetar el fondo sepia/claro) y se oculta al bajar leyendo.
+  const isLecturaTop = isLectura && !isScrolled && !isMenuOpen;
+  const hideHeaderOnRead = isLectura && isScrolled && !isMenuOpen;
 
   const navigation = [
     { name: 'Inicio', href: '/' },
@@ -41,8 +45,12 @@ export default function Header() {
 
   return (
     <header
-      className={`fixed w-full z-50 transition-all duration-500 ${
-        isTransparent
+      className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-500 ${
+        hideHeaderOnRead
+          ? '-translate-y-full opacity-0 pointer-events-none'
+          : 'translate-y-0 opacity-100'
+      } ${
+        isHomeTransparent || isLecturaTop
           ? 'bg-transparent border-transparent py-2'
           : 'bg-white/90 backdrop-blur-md border-b border-gray-100 py-0'
       }`}
@@ -59,7 +67,7 @@ export default function Header() {
                 width={200}
                 height={80}
                 className={`h-14 w-auto md:h-16 transition-all duration-300 ${
-                  isTransparent
+                  isHomeTransparent
                     ? 'drop-shadow-[0_2px_8px_rgba(255,255,255,0.7)] brightness-110'
                     : ''
                 }`}
@@ -75,7 +83,7 @@ export default function Header() {
                 key={item.name}
                 href={item.href}
                 className={`font-medium transition-colors duration-200 ${
-                  isTransparent
+                  isHomeTransparent
                     ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] hover:text-[#DEA6AB]'
                     : 'text-ui-muted hover:text-brand-primary'
                 }`}
@@ -90,7 +98,7 @@ export default function Header() {
             <Link
               href="/visitanos"
               className={`px-5 py-2 rounded-sm font-medium transition-colors duration-200 shadow-md ${
-                isTransparent
+                isHomeTransparent
                   ? 'bg-brand-primary text-white border border-white/20 hover:bg-brand-secondary'
                   : 'bg-brand-primary text-white hover:bg-brand-secondary'
               }`}
@@ -100,11 +108,11 @@ export default function Header() {
           </div>
 
           {/* Botón Menú Móvil */}
-          <div className="md:flex flex items-center md:hidden">
+          <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className={`focus:outline-none transition-colors duration-200 ${
-                isTransparent
+                isHomeTransparent
                   ? 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] hover:text-gray-300'
                   : 'text-ui-dark hover:text-brand-primary'
               }`}
