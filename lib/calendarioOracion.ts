@@ -19,7 +19,7 @@ export const CALENDARIO_ORACION: Record<number, string[]> = {
     "Stephane (Camille e hijos)",
     "Gloria Castro (Familia)",
     "Ferney (Yennifer e hijos)",
-    "Alejandro Tamayo (Ximena)" // Verificar si hay más nombres en el paréntesis
+    "Alejandro Tamayo (Ximena e hijos)" // Verificar si hay más nombres en el paréntesis
   ],
   5: [
     "Cesar Jair (Carolina y Sebastián)",
@@ -39,9 +39,8 @@ export const CALENDARIO_ORACION: Record<number, string[]> = {
   ],
   8: [
     "Omar (Carmenza, Juan Miguel, Santiago)",
-    "Doris (Héctor Fabio e hijos)",
-    "Hernán González (Esposa e hijos)",
-    "Alba" // En el PDF se cortó el paréntesis debajo de Alba
+    "Alba Doris (Héctor Fabio e hijos)",
+    "Hernán González (Esposa e hijos)"// En el PDF se cortó el paréntesis debajo de Alba
   ],
   9: [
     "María Lili Cortés (Familia)",
@@ -54,7 +53,7 @@ export const CALENDARIO_ORACION: Record<number, string[]> = {
     "María Marín (Familia)",
     "Marina Marín (Familia)",
     "Blanca Estrella Morales (Familia)",
-    "Humberto García"
+    "Humberto García (Pilar y familia)"
   ],
   11: [
     "Antonio Ramírez (Diana, Sofía, Vanesa, Lucía, Isabel, Luis)",
@@ -75,7 +74,7 @@ export const CALENDARIO_ORACION: Record<number, string[]> = {
     "Luz Marina Marín (Familia)",
     "Dora Osorio (Mateo y familia)",
     "Diana Bernal (Andrés, Daniel, Salomé)",
-    "Néstor Jaime (Eliana)" // Verificar si hay más nombres después de Eliana
+    "Néstor Jaime (Eliana, Sebastián)" // Verificar si hay más nombres después de Eliana
   ],
   15: [
     "Héctor Zaraza (Blanca, Anderson, Dany, Jeison, Jhon, Caroline, Isaac)",
@@ -90,7 +89,7 @@ export const CALENDARIO_ORACION: Record<number, string[]> = {
     "Alexander Echeverry (Cenelia)",
     "Julián (Patricia, María Paula, Lucas, Edén)",
     "Alba Lucía Ruiz (Juan Manuel)",
-    "Juan Manuel"
+    "Juan Manuel Benavidez"
   ],
   18: [
     "Óscar Javier (Familia)",
@@ -130,7 +129,7 @@ export const CALENDARIO_ORACION: Record<number, string[]> = {
     "Iglesias hermanas en Armenia, Pereira y Cali, sus miembros y familias"
   ],
   29: [
-    "Ministerio misionero Biblical Christian Missionary Society (BCMS) y por las misiones que se están desarrollando en Latinoamérica y el mundo"
+    "Ministerio misionero Biblical Christian Missionary Society (BCMS) y por las misiones que se están desarrollando en Latinoamérica y el África"
   ],
   30: [
     "Nuestra nación Colombia (Su gobierno, instituciones, ciudadanía en general)"
