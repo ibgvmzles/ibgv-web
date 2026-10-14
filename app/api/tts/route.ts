@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge'; // Funciona más rápido en Vercel Edge
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,16 +10,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Texto requerido' }, { status: 400 });
     }
 
-    // Si es voz masculina (Jorge o Alonso), reducimos la velocidad base un -14% para que suene solemne y pausada.
-    // Si es voz femenina (Dalia), la reducimos un -10%.
+    // Leemos tus credenciales oficiales de Azure
+    const apiKey = process.env.AZURE_TTS_KEY;
+    const region = process.env.AZURE_TTS_REGION;
+
+    if (!apiKey || !region) {
+      console.error('Faltan variables de entorno AZURE_TTS_KEY o AZURE_TTS_REGION');
+      return NextResponse.json({ error: 'Faltan credenciales de Azure' }, { status: 500 });
+    }
+
+    // Configuración de velocidad según la voz (Solemnidad)
     const isMaleVoice = voice.includes('Jorge') || voice.includes('Alonso');
     const baseRate = isMaleVoice ? '-14%' : '-10%';
-    const langCode = voice.substring(0, 5); // Ej: "es-MX" o "es-US"
+    const langCode = voice.substring(0, 5); // ej: "es-MX"
 
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-
-    // Escapamos caracteres especiales XML
+    // Limpiamos el texto para evitar que caracteres especiales rompan el XML
     const cleanText = text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -28,39 +32,49 @@ export async function POST(req: NextRequest) {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&apos;');
 
-    const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${langCode}">
-      <voice name="${voice}">
-        <prosody rate="${baseRate}" pitch="-1Hz">
+    // Construimos el SSML (Lenguaje de Marcado de Síntesis de Voz)
+    const ssml = `<speak version='1.0' xml:lang='${langCode}'>
+      <voice xml:lang='${langCode}' name='${voice}'>
+        <prosody rate='${baseRate}' pitch='-1Hz'>
           ${cleanText}
         </prosody>
       </voice>
     </speak>`;
 
-    const rawResult: any = tts.rawToStream(ssml);
-    const stream = rawResult?.audioStream || rawResult;
+    // URL oficial de Azure Cognitive Services
+    const endpoint = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
-    const audioBuffer = await new Promise<Buffer>((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      stream.on('data', (chunk: any) => {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      });
-      stream.on('end', () => {
-        resolve(Buffer.concat(chunks));
-      });
-      stream.on('error', (err: any) => {
-        reject(err);
-      });
+    // Hacemos la petición directa a la API oficial de Microsoft
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Ocp-Apim-Subscription-Key': apiKey,
+        'Content-Type': 'application/ssml+xml',
+        'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+        'User-Agent': 'ibgv-web-app'
+      },
+      body: ssml,
     });
 
-    return new NextResponse(new Uint8Array(audioBuffer), {
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error de Azure:', errorText);
+      throw new Error(`Azure devolvió error: ${response.status}`);
+    }
+
+    // Obtenemos el audio limpio
+    const audioBuffer = await response.arrayBuffer();
+
+    return new NextResponse(audioBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': 'public, max-age=86400', // El caché evita gastar cuota si alguien repite la lectura hoy
       },
     });
+
   } catch (error) {
-    console.error('Error generando voz neural:', error);
+    console.error('Error generando voz oficial de Azure:', error);
     return NextResponse.json({ error: 'No se pudo generar el audio' }, { status: 500 });
   }
 }
