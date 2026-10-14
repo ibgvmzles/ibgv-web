@@ -157,7 +157,7 @@ export default function PaginaLectura() {
   const [rachaActual, setRachaActual] = useState(0);
   const [completadoHoy, setCompletadoHoy] = useState(false);
 
-  // --- ESTADOS Y REFS PARA VOZ NEURAL ---
+  // --- ESTADOS Y REFS PARA VOZ NEURAL (HÍBRIDA) ---
   const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle');
   const [selectedVoice, setSelectedVoice] = useState<NeuralVoice>('es-MX-JorgeNeural');
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
@@ -226,7 +226,7 @@ export default function PaginaLectura() {
     };
   }, []);
 
-  // Extrae el texto limpio sin números de versículos y lo divide en bloques ágiles (~1200 caracteres)
+  // Extrae el texto limpio sin números de versículos y lo divide en bloques ágiles
   const prepararFragmentosDeLectura = (): string[] => {
     if (!htmlContent) return [];
     const tempDiv = document.createElement('div');
@@ -268,7 +268,6 @@ export default function PaginaLectura() {
     return bloques;
   };
 
-  // Descarga un fragmento desde nuestra API /api/tts (y lo guarda en memoria por si lo repite)
   const obtenerAudioUrlDeFragmento = async (index: number, voice: string): Promise<string | null> => {
     const texto = chunksRef.current[index];
     if (!texto) return null;
@@ -284,7 +283,7 @@ export default function PaginaLectura() {
       body: JSON.stringify({ text: texto, voice }),
     });
 
-    if (!res.ok) throw new Error('Error en servidor TTS');
+    if (!res.ok) throw new Error('Servidor Vercel bloqueado o caído');
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -292,7 +291,35 @@ export default function PaginaLectura() {
     return url;
   };
 
-  // Reproduce un bloque y pre-carga el siguiente en segundo plano
+  // --- MOTOR 2: VOZ NATIVA DE RESPALDO (Fallback si Vercel/Microsoft fallan) ---
+  const reproducirConVozNativa = (index: number, voice: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setAudioStatus('idle');
+      return;
+    }
+
+    const texto = chunksRef.current[index];
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.rate = playbackSpeed;
+
+    // Buscamos una voz en español en el celular/PC (preferiblemente de alta calidad)
+    const voces = window.speechSynthesis.getVoices();
+    const vozEsp = voces.find(v => v.lang.startsWith('es') && (v.name.includes('Neural') || v.name.includes('Natural') || v.name.includes('Google')))
+                || voces.find(v => v.lang.startsWith('es'));
+
+    if (vozEsp) utterance.voice = vozEsp;
+
+    utterance.onend = () => {
+      if (!isCancelledRef.current) reproducirFragmento(index + 1, voice);
+    };
+
+    utterance.onerror = () => setAudioStatus('idle');
+
+    window.speechSynthesis.speak(utterance);
+    setAudioStatus('playing');
+  };
+
+  // --- MOTOR 1: REPRODUCTOR PRINCIPAL NEURAL ---
   const reproducirFragmento = async (index: number, voice: string) => {
     if (isCancelledRef.current) return;
 
@@ -309,7 +336,7 @@ export default function PaginaLectura() {
       const audioUrl = await obtenerAudioUrlDeFragmento(index, voice);
       if (isCancelledRef.current || !audioUrl) return;
 
-      // Pre-cargamos el siguiente bloque silenciosamente mientras suena el actual
+      // Pre-cargamos el siguiente bloque silenciosamente
       if (index + 1 < chunksRef.current.length) {
         obtenerAudioUrlDeFragmento(index + 1, voice).catch(() => {});
       }
@@ -330,20 +357,30 @@ export default function PaginaLectura() {
       await audioRef.current.play();
       setAudioStatus('playing');
     } catch (error) {
-      console.error('Error reproduciendo audio neural:', error);
-      setAudioStatus('idle');
+      console.warn('Bloqueo detectado o error de red. Pasando a voz nativa del celular...', error);
+      reproducirConVozNativa(index, voice);
     }
   };
 
   const handlePlayPauseAudio = () => {
+    // Truco para burlar el bloqueo de Autoplay de Chrome/Safari móvil
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      // Un audio en blanco de 1 milisegundo para mantener los permisos activos
+      audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+      audioRef.current.play().catch(()=>{});
+    }
+
     if (audioStatus === 'playing') {
-      audioRef.current?.pause();
+      if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+      if ('speechSynthesis' in window && window.speechSynthesis.speaking) window.speechSynthesis.pause();
       setAudioStatus('paused');
       return;
     }
 
-    if (audioStatus === 'paused' && audioRef.current) {
-      audioRef.current.play();
+    if (audioStatus === 'paused') {
+      if (audioRef.current && audioRef.current.src) audioRef.current.play();
+      if ('speechSynthesis' in window && window.speechSynthesis.paused) window.speechSynthesis.resume();
       setAudioStatus('playing');
       return;
     }
@@ -365,6 +402,9 @@ export default function PaginaLectura() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     setAudioStatus('idle');
     setCurrentChunkIdx(0);
   };
@@ -373,6 +413,7 @@ export default function PaginaLectura() {
     setSelectedVoice(nuevaVoz);
     if (audioStatus === 'playing' || audioStatus === 'paused') {
       if (audioRef.current) audioRef.current.pause();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       isCancelledRef.current = false;
       reproducirFragmento(currentChunkIdx, nuevaVoz);
     }
