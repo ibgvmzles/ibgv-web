@@ -163,6 +163,7 @@ export default function PaginaLectura() {
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [currentChunkIdx, setCurrentChunkIdx] = useState(0);
   const [totalChunks, setTotalChunks] = useState(0);
+  const [useNativeFallback, setUseNativeFallback] = useState(false); // <--- NUEVO ESTADO para controlar el fallback
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<string[]>([]);
@@ -170,6 +171,11 @@ export default function PaginaLectura() {
   const isCancelledRef = useRef<boolean>(false);
 
   useEffect(() => {
+    // Forzar al navegador móvil a cargar la lista de voces nativas en segundo plano
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+    }
+
     const fetchLectura = async () => {
       const plan = generarPlan();
 
@@ -226,29 +232,20 @@ export default function PaginaLectura() {
     };
   }, []);
 
-  // Extrae el texto limpio sin números de versículos y lo divide en bloques ágiles
   const prepararFragmentosDeLectura = (): string[] => {
     if (!htmlContent) return [];
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
 
-    // Quitamos los numeritos de versículo (.v) para que no interrumpan las frases
     tempDiv.querySelectorAll('.v').forEach(el => el.remove());
-
-    // Convertimos números de capítulo (.c) en pausa hablada ("Capítulo X.")
     tempDiv.querySelectorAll('.c').forEach(el => {
       el.textContent = ` Capítulo ${el.textContent?.trim()}. `;
     });
-
-    // Aseguramos pausa en títulos y subtítulos
     tempDiv.querySelectorAll('h2, h3, .s').forEach(el => {
       el.textContent = ` ${el.textContent?.trim()}. `;
     });
 
-    const rawText = (tempDiv.textContent || tempDiv.innerText || '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
+    const rawText = (tempDiv.textContent || tempDiv.innerText || '').replace(/\s+/g, ' ').trim();
     const oraciones = rawText.match(/[^.!?]+[.!?]+/g) || [rawText];
     const bloques: string[] = [];
     let bloqueActual = '';
@@ -291,26 +288,40 @@ export default function PaginaLectura() {
     return url;
   };
 
-  // --- MOTOR 2: VOZ NATIVA DE RESPALDO (Fallback si Vercel/Microsoft fallan) ---
-  const reproducirConVozNativa = (index: number, voice: string) => {
+  // --- MOTOR 2: VOZ NATIVA DE RESPALDO ACTUALIZADO ---
+  const reproducirConVozNativa = (index: number, voiceId: string, speed: number) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       setAudioStatus('idle');
       return;
     }
 
     const texto = chunksRef.current[index];
+    if (!texto) return;
+
     const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.rate = playbackSpeed;
+    utterance.rate = speed; // Usar la velocidad exacta que pasó el usuario
 
-    // Buscamos una voz en español en el celular/PC (preferiblemente de alta calidad)
+    // Buscamos todas las voces en español del celular
     const voces = window.speechSynthesis.getVoices();
-    const vozEsp = voces.find(v => v.lang.startsWith('es') && (v.name.includes('Neural') || v.name.includes('Natural') || v.name.includes('Google')))
-                || voces.find(v => v.lang.startsWith('es'));
+    const vocesEsp = voces.filter(v => v.lang.startsWith('es'));
 
-    if (vozEsp) utterance.voice = vozEsp;
+    if (vocesEsp.length > 0) {
+      const esHombre = voiceId.includes('Jorge') || voiceId.includes('Alonso');
+      let vozElegida = vocesEsp[0]; // Por defecto la primera
+
+      if (esHombre) {
+        // Intentar encontrar una voz de hombre (Siri/Google a veces lo indican en el nombre)
+        vozElegida = vocesEsp.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('masculino') || v.name.toLowerCase().includes('jorge') || v.name.toLowerCase().includes('pablo')) || vocesEsp[1] || vocesEsp[0];
+      } else {
+        // Intentar encontrar una voz de mujer para Dalia
+        vozElegida = vocesEsp.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('femenino') || v.name.toLowerCase().includes('dalia') || v.name.toLowerCase().includes('mónica') || v.name.toLowerCase().includes('paulina')) || vocesEsp[0];
+      }
+
+      utterance.voice = vozElegida;
+    }
 
     utterance.onend = () => {
-      if (!isCancelledRef.current) reproducirFragmento(index + 1, voice);
+      if (!isCancelledRef.current) reproducirConVozNativa(index + 1, voiceId, speed);
     };
 
     utterance.onerror = () => setAudioStatus('idle');
@@ -320,7 +331,7 @@ export default function PaginaLectura() {
   };
 
   // --- MOTOR 1: REPRODUCTOR PRINCIPAL NEURAL ---
-  const reproducirFragmento = async (index: number, voice: string) => {
+  const reproducirFragmento = async (index: number, voice: string, speed: number) => {
     if (isCancelledRef.current) return;
 
     if (index >= chunksRef.current.length) {
@@ -332,11 +343,16 @@ export default function PaginaLectura() {
     setCurrentChunkIdx(index);
     setAudioStatus('loading');
 
+    // Si ya sabemos que Vercel está fallando en esta sesión, saltamos directo a la voz nativa
+    if (useNativeFallback) {
+      reproducirConVozNativa(index, voice, speed);
+      return;
+    }
+
     try {
       const audioUrl = await obtenerAudioUrlDeFragmento(index, voice);
       if (isCancelledRef.current || !audioUrl) return;
 
-      // Pre-cargamos el siguiente bloque silenciosamente
       if (index + 1 < chunksRef.current.length) {
         obtenerAudioUrlDeFragmento(index + 1, voice).catch(() => {});
       }
@@ -346,11 +362,11 @@ export default function PaginaLectura() {
       }
 
       audioRef.current.src = audioUrl;
-      audioRef.current.playbackRate = playbackSpeed;
+      audioRef.current.playbackRate = speed;
 
       audioRef.current.onended = () => {
         if (!isCancelledRef.current) {
-          reproducirFragmento(index + 1, voice);
+          reproducirFragmento(index + 1, voice, speed);
         }
       };
 
@@ -358,15 +374,15 @@ export default function PaginaLectura() {
       setAudioStatus('playing');
     } catch (error) {
       console.warn('Bloqueo detectado o error de red. Pasando a voz nativa del celular...', error);
-      reproducirConVozNativa(index, voice);
+      setUseNativeFallback(true); // Marcamos el estado para no seguir intentando con el servidor roto
+      reproducirConVozNativa(index, voice, speed);
     }
   };
 
   const handlePlayPauseAudio = () => {
-    // Truco para burlar el bloqueo de Autoplay de Chrome/Safari móvil
     if (!audioRef.current) {
       audioRef.current = new Audio();
-      // Un audio en blanco de 1 milisegundo para mantener los permisos activos
+      // Audio silencioso para destrabar Chrome Móvil
       audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
       audioRef.current.play().catch(()=>{});
     }
@@ -385,7 +401,6 @@ export default function PaginaLectura() {
       return;
     }
 
-    // Inicia desde cero o desde el fragmento actual
     isCancelledRef.current = false;
     if (chunksRef.current.length === 0) {
       const generados = prepararFragmentosDeLectura();
@@ -393,7 +408,7 @@ export default function PaginaLectura() {
       setTotalChunks(generados.length);
     }
 
-    reproducirFragmento(currentChunkIdx, selectedVoice);
+    reproducirFragmento(currentChunkIdx, selectedVoice, playbackSpeed);
   };
 
   const detenerAudio = () => {
@@ -409,20 +424,37 @@ export default function PaginaLectura() {
     setCurrentChunkIdx(0);
   };
 
+  // --- AHORA SÍ: SI CAMBIAS DE VOZ, REINICIAMOS EL AUDIO ---
   const cambiarVoz = (nuevaVoz: NeuralVoice) => {
     setSelectedVoice(nuevaVoz);
     if (audioStatus === 'playing' || audioStatus === 'paused') {
       if (audioRef.current) audioRef.current.pause();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel(); // Cancelar la voz vieja del celular
       isCancelledRef.current = false;
-      reproducirFragmento(currentChunkIdx, nuevaVoz);
+
+      // Reiniciamos con la nueva voz
+      if (useNativeFallback) {
+        reproducirConVozNativa(currentChunkIdx, nuevaVoz, playbackSpeed);
+      } else {
+        reproducirFragmento(currentChunkIdx, nuevaVoz, playbackSpeed);
+      }
     }
   };
 
+  // --- AHORA SÍ: SI CAMBIAS DE VELOCIDAD, REINICIAMOS EL AUDIO MÓVIL ---
   const cambiarVelocidad = (nuevaVel: number) => {
     setPlaybackSpeed(nuevaVel);
+
+    // Si estamos en Vercel, el audio se acelera en vivo sin pausarse
     if (audioRef.current) {
       audioRef.current.playbackRate = nuevaVel;
+    }
+
+    // Si estamos en la voz del celular, hay que reiniciar el párrafo para que tome el nuevo ritmo
+    if (useNativeFallback && (audioStatus === 'playing' || audioStatus === 'paused')) {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      isCancelledRef.current = false;
+      reproducirConVozNativa(currentChunkIdx, selectedVoice, nuevaVel);
     }
   };
 
@@ -541,7 +573,7 @@ export default function PaginaLectura() {
         </header>
 
         {/* =========================================
-            MEDIDOR DE PROGRESO Y RACHA (Con Casilla Rápida)
+            MEDIDOR DE PROGRESO Y RACHA
             ========================================= */}
         <section className="mb-6 font-oswald">
           <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-4">
@@ -619,7 +651,7 @@ export default function PaginaLectura() {
         </section>
 
         {/* =========================================
-            REPRODUCTOR DE VOZ NEURAL GUIADA
+            REPRODUCTOR DE VOZ NEURAL (Con manejo de fallos)
             ========================================= */}
         {!loading && htmlContent && (
           <section
@@ -646,7 +678,7 @@ export default function PaginaLectura() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>Preparando voz neural...</span>
+                      <span>Preparando voz...</span>
                     </>
                   ) : audioStatus === 'playing' ? (
                     <>
@@ -733,7 +765,14 @@ export default function PaginaLectura() {
               </div>
             </div>
 
-            {/* Barra de avance por secciones cuando está activo */}
+            {/* Si Vercel falla, le mostramos sutilmente que está usando la voz de su celular */}
+            {useNativeFallback && (audioStatus === 'playing' || audioStatus === 'paused') && (
+              <div className="mt-2 text-[11px] text-amber-600 font-medium">
+                * Conexión saturada. Usando la voz de respaldo instalada en tu dispositivo.
+              </div>
+            )}
+
+            {/* Barra de avance por secciones */}
             {totalChunks > 0 && (audioStatus === 'playing' || audioStatus === 'paused' || audioStatus === 'loading') && (
               <div className="mt-3 pt-3 border-t border-black/5 flex items-center justify-between gap-3 text-xs text-gray-500">
                 <span>
